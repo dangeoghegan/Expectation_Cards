@@ -4,12 +4,22 @@
  */
 
 /**
+ * Add custom menu to the bound Google Sheet
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Expectation Cards')
+    .addItem('Setup Application', 'installApp')
+    .addToUi();
+}
+
+/**
  * Standard HTTP GET handler.
  */
 function doGet(e) {
   // If no setup, fail gracefully
-  try { Config.getDataSpreadsheetId(); } catch(err) {
-    return ContentService.createTextOutput("App not configured. Please run installApp().");
+  try { Config.getGeminiApiKey(); } catch(err) {
+    return ContentService.createTextOutput("App not configured. Please run installApp() from the custom menu.");
   }
 
   // Routing: If token is provided, show student card. Otherwise, show teacher app.

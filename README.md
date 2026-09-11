@@ -12,32 +12,27 @@ A production-ready, mobile-first web application for high-school teachers to rec
 
 ## Setup & Deployment Instructions
 
-### 1. Google Cloud Project & APIs
-1. Create a Standard Google Cloud Project.
-2. Enable the following APIs in the Cloud Console:
-   - Google Classroom API
-   - Google Drive API
-   - Google Sheets API
-   - Generative Language API (Gemini)
+### 1. Google Sheet Setup
+1. Create a new Google Sheet (e.g., named "Expectation Cards DB").
+2. In the Google Sheet, go to **Extensions** > **Apps Script**.
 
-### 2. Clasp Setup
-1. Clone this repository.
+### 2. Apps Script Setup
+1. Clone this repository to your local machine.
 2. Run `npm install` to get the clasp dependency.
 3. Authenticate clasp: `npx clasp login`
-4. Create a new bound/standalone Apps Script project: `npx clasp create --type standalone`
-5. Push the code: `npx clasp push`
-
-### 3. Apps Script Setup
-1. Open the project in the Apps Script Editor (`npx clasp open`).
-2. Go to **Services** (left sidebar) and ensure both `Classroom API (v1)` and `Drive API (v2)` are added.
-3. Run the `installApp()` function from `src/Setup.js`. This will create the Database spreadsheet and Drive folders.
-4. Go to **Project Settings** (gear icon) > **Script Properties**.
-5. Ensure the following Script Properties are set:
+4. Link to your bound Apps Script project: `npx clasp clone <script-id>` (Find the script ID in the Apps Script URL or Project Settings).
+5. Ensure the local files override the cloned default files, and push the code: `npx clasp push`
+6. In the Apps Script Editor, go to **Services** (left sidebar) and add:
+   - `Classroom API (v1)`
+   - `Drive API (v2)`
+7. Refresh your Google Sheet. You should see a new custom menu: **Expectation Cards**.
+8. Click **Expectation Cards** > **Setup Application** to initialize the required sheets and Drive folders. (You will need to authorize the script).
+9. Go to **Project Settings** (gear icon) > **Script Properties**.
+10. Ensure the following Script Properties are set:
 
 | Property Name | Example Value | Description |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | `AIzaSy...` | Get from Google AI Studio. |
-| `DATA_SPREADSHEET_ID` | (auto-generated) | The ID of the connected Google Sheet. |
 | `EXPECTATION_CARDS_ROOT_FOLDER_ID` | (auto-generated) | Root Drive Folder ID. |
 | `EXPECTATION_CARDS_AUDIO_FOLDER_ID`| (auto-generated) | Audio Storage Folder ID. |
 | `TEACHER_EMAIL_ALLOWLIST` | `teacher@school.edu` | Comma-separated list of authorised teachers. |
@@ -46,7 +41,7 @@ A production-ready, mobile-first web application for high-school teachers to rec
 | `AUDIO_RETENTION_DAYS` | `30` | Days to keep fallback audio. |
 | `DELETE_AUDIO_AFTER_TRANSCRIPTION` | `true` | Set to true to delete audio immediately after processing. |
 
-### 4. Deployment
+### 3. Deployment
 1. Click **Deploy** > **New deployment**.
 2. Select type **Web app**.
 3. **Execute as:** User accessing the web app.

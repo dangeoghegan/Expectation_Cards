@@ -26,7 +26,6 @@ const Config = {
 
   // Explicit getters for critical properties
   getGeminiApiKey() { return this.getRequired('GEMINI_API_KEY'); },
-  getDataSpreadsheetId() { return this.getRequired('DATA_SPREADSHEET_ID'); },
   getRootFolderId() { return this.getRequired('EXPECTATION_CARDS_ROOT_FOLDER_ID'); },
   getAudioFolderId() { return this.getRequired('EXPECTATION_CARDS_AUDIO_FOLDER_ID'); },
   getExportsFolderId() { return this.get('EXPECTATION_CARDS_EXPORTS_FOLDER_ID') || this.getRootFolderId(); },

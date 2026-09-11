@@ -5,8 +5,7 @@
 
 const SheetService = {
   getSpreadsheet() {
-    const id = Config.getDataSpreadsheetId();
-    return SpreadsheetApp.openById(id);
+    return SpreadsheetApp.getActiveSpreadsheet();
   },
 
   getSheet(sheetName) {

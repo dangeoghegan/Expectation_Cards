@@ -1,13 +1,13 @@
 # 1. Architecture Explanation
 
-The **Expectation Cards** application is designed as a serverless Google Workspace application using **Google Apps Script** as the backend host and **HTML Service** for the frontend.
+The **Expectation Cards** application is designed as a serverless Google Workspace application using **Google Apps Script** as the backend host and **HTML Service** for the frontend, bound directly to a Google Sheet.
 
-- **Backend (Apps Script):** Acts as the central orchestrator. It handles routing (`doGet`), provides RPC endpoints for the frontend (`google.script.run`), and manages interactions with Google services.
-- **Database (Google Sheets):** Used for persistent, schema-driven data storage (`SheetService.js`). It stores cards, versions, checklist items, audit logs, and delivery records. LockService is implemented to handle concurrent writes.
+- **Backend (Apps Script):** Acts as the central orchestrator. It handles routing (`doGet`), provides RPC endpoints for the frontend (`google.script.run`), and manages interactions with Google services. It also creates a custom menu in the bound Sheet for easy initialization.
+- **Database (Google Sheets):** The bound active spreadsheet acts as a persistent, schema-driven data store (`SheetService.js`). It stores cards, versions, checklist items, audit logs, and delivery records. `LockService` is implemented to handle concurrent writes safely.
 - **File Storage (Google Drive):** Used temporarily or permanently (based on config) to store `.webm` audio blobs recorded by the teacher.
-- **AI Processing (Gemini API):** Audio files are sent to the Gemini File API and transcribed. The transcript is then passed back to Gemini with a strict schema to extract a structured JSON representation of the expectation card. It handles merging of existing cards.
+- **AI Processing (Gemini API):** Audio files are sent to the Gemini File API and transcribed. The transcript is then passed back to Gemini with a strict schema to extract a structured JSON representation of the expectation card. It securely handles merging of existing cards while retaining prior completion statuses and UUIDs.
 - **Delivery (Google Classroom API):** Integrates as an Advanced Service. It fetches courses and rosters. Upon sending a card, it attaches a unique, stable link (tokenized) to a student's submission in an assignment, or creates a new targeted assignment if required.
-- **Frontend (Vanilla JS/HTML/CSS):** Designed mobile-first. It uses separate HTML files for layout (`TeacherApp`, `StudentCard`), CSS (`Styles`), and JavaScript (`ClientJS`).
+- **Frontend (Vanilla JS/HTML/CSS):** Designed mobile-first. It uses separate HTML files for layout (`TeacherApp`, `StudentCard`), CSS (`Styles`), and JavaScript (`ClientJS`). Robust escaping utilities prevent XSS.
 
 # 2. Repository/File Tree
 
@@ -72,7 +72,6 @@ const Config = {
 
   // Explicit getters for critical properties
   getGeminiApiKey() { return this.getRequired('GEMINI_API_KEY'); },
-  getDataSpreadsheetId() { return this.getRequired('DATA_SPREADSHEET_ID'); },
   getRootFolderId() { return this.getRequired('EXPECTATION_CARDS_ROOT_FOLDER_ID'); },
   getAudioFolderId() { return this.getRequired('EXPECTATION_CARDS_AUDIO_FOLDER_ID'); },
   getExportsFolderId() { return this.get('EXPECTATION_CARDS_EXPORTS_FOLDER_ID') || this.getRootFolderId(); },
@@ -289,8 +288,7 @@ const AuditService = {
 
 const SheetService = {
   getSpreadsheet() {
-    const id = Config.getDataSpreadsheetId();
-    return SpreadsheetApp.openById(id);
+    return SpreadsheetApp.getActiveSpreadsheet();
   },
 
   getSheet(sheetName) {
@@ -1256,17 +1254,7 @@ function installApp() {
   }
 
   // 3. Setup Sheet
-  let ssId = props.getProperty('DATA_SPREADSHEET_ID');
-  let ss;
-  if (!ssId) {
-    ss = SpreadsheetApp.create('Expectation Cards Database');
-    ssId = ss.getId();
-    props.setProperty('DATA_SPREADSHEET_ID', ssId);
-    // Move to root folder
-    DriveApp.getFileById(ssId).moveTo(DriveApp.getFolderById(rootId));
-  } else {
-    ss = SpreadsheetApp.openById(ssId);
-  }
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // Initialize Sheets with Headers
   const requiredSheets = {
@@ -1309,12 +1297,22 @@ function installApp() {
  */
 
 /**
+ * Add custom menu to the bound Google Sheet
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Expectation Cards')
+    .addItem('Setup Application', 'installApp')
+    .addToUi();
+}
+
+/**
  * Standard HTTP GET handler.
  */
 function doGet(e) {
   // If no setup, fail gracefully
-  try { Config.getDataSpreadsheetId(); } catch(err) {
-    return ContentService.createTextOutput("App not configured. Please run installApp().");
+  try { Config.getGeminiApiKey(); } catch(err) {
+    return ContentService.createTextOutput("App not configured. Please run installApp() from the custom menu.");
   }
 
   // Routing: If token is provided, show student card. Otherwise, show teacher app.
@@ -2534,51 +2532,42 @@ const StudentApp = {
 
 # 4. Setup & Deployment Instructions
 
-### 1. Google Cloud Project & APIs
-1. Create a Standard Google Cloud Project in the [Google Cloud Console](https://console.cloud.google.com).
-2. Enable the following APIs:
-   - Google Classroom API
-   - Google Drive API
-   - Google Sheets API
-   - Generative Language API (Gemini)
-3. Associate this Google Cloud Project number with your Apps Script project (Project Settings > Google Cloud Platform (GCP) Project).
+### 1. Google Sheet Setup
+1. Create a new Google Sheet (e.g., named "Expectation Cards DB").
+2. In the Google Sheet, go to **Extensions** > **Apps Script**.
 
-### 2. Apps Script & Code Setup
-1. Clone the repository and run `npm install`.
-2. Login to clasp: `npx clasp login`
-3. Create a project: `npx clasp create --type standalone`
-4. Push code: `npx clasp push`
-5. Open the editor: `npx clasp open`
-6. In the Apps Script Editor, go to **Services** (+) and add:
+### 2. Apps Script Setup
+1. Clone this repository to your local machine.
+2. Run `npm install` to get the clasp dependency.
+3. Authenticate clasp: `npx clasp login`
+4. Link to your bound Apps Script project: `npx clasp clone <script-id>` (Find the script ID in the Apps Script URL or Project Settings).
+5. Ensure the local files override the cloned default files, and push the code: `npx clasp push`
+6. In the Apps Script Editor, go to **Services** (left sidebar) and add:
    - `Classroom API (v1)`
    - `Drive API (v2)`
-7. Run the `installApp` function in `src/Setup.js`. Allow the OAuth permissions. This will generate the Spreadsheet and Drive folders.
+7. Refresh your Google Sheet. You should see a new custom menu: **Expectation Cards**.
+8. Click **Expectation Cards** > **Setup Application** to initialize the required sheets and Drive folders. (You will need to authorize the script).
+9. Go to **Project Settings** (gear icon) > **Script Properties**.
+10. Ensure the following Script Properties are set (see Configuration below).
 
 ### 3. Deployment
 1. Click **Deploy** -> **New deployment**.
 2. Select **Web app**.
 3. **Execute as:** `User accessing the web app`.
 4. **Who has access:** `Anyone within [Your Domain]` (or `Anyone` if testing personal accounts).
-5. Deploy and copy the Web App URL.
-
-### 4. Configuration
-1. Go to Project Settings (gear icon) > Script Properties.
-2. Ensure properties are configured (see section 5 below).
-3. Set `APP_BASE_URL` to the deployed Web App URL you just copied.
-4. Set `GEMINI_API_KEY` obtained from Google AI Studio.
+5. Deploy and copy the Web App URL, paste it into the `APP_BASE_URL` script property.
 
 # 5. Script Properties Configuration
 
 | Property Name | Example Value | Description |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | `AIzaSy...` | Required. Your Gemini API key. |
-| `DATA_SPREADSHEET_ID` | `1AbCdE...` | Generated by `installApp()`. ID of the Sheets database. |
 | `EXPECTATION_CARDS_ROOT_FOLDER_ID` | `1xyz...` | Generated by `installApp()`. Drive Root Folder ID. |
 | `EXPECTATION_CARDS_AUDIO_FOLDER_ID`| `1abc...` | Generated by `installApp()`. Drive Audio Folder ID. |
 | `TEACHER_EMAIL_ALLOWLIST` | `teacher1@school.edu, teacher2@...` | Comma-separated list of authorised teachers. |
 | `AUTHORISED_DOMAIN` | `school.edu` | (Optional) Domain to authorise all teachers from. |
 | `APP_BASE_URL` | `https://script.google.com/a/.../exec` | The published Web App URL. |
-| `AUDIO_RETENTION_DAYS` | `30` | Days to keep audio before cleanup (requires cron trigger). |
+| `AUDIO_RETENTION_DAYS` | `30` | Days to keep audio before cleanup (can also be managed via frontend Settings). |
 | `DELETE_AUDIO_AFTER_TRANSCRIPTION` | `true` | If true, deletes Drive audio file immediately after Gemini transcription. |
 
 # 6. Required OAuth Scopes and `appsscript.json`

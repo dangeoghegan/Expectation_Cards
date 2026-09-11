@@ -28,17 +28,7 @@ function installApp() {
   }
 
   // 3. Setup Sheet
-  let ssId = props.getProperty('DATA_SPREADSHEET_ID');
-  let ss;
-  if (!ssId) {
-    ss = SpreadsheetApp.create('Expectation Cards Database');
-    ssId = ss.getId();
-    props.setProperty('DATA_SPREADSHEET_ID', ssId);
-    // Move to root folder
-    DriveApp.getFileById(ssId).moveTo(DriveApp.getFolderById(rootId));
-  } else {
-    ss = SpreadsheetApp.openById(ssId);
-  }
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // Initialize Sheets with Headers
   const requiredSheets = {
