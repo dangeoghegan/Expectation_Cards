@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('Styles'); ?>
+  </head>
+  <body>
+    <div id="app-container">
+      <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p id="loading-message">Loading...</p>
+      </div>
+
+      <? if (mode === 'teacher') { ?>
+        <?!= include('TeacherApp'); ?>
+      <? } else { ?>
+        <?!= include('StudentCard'); ?>
+      <? } ?>
+    </div>
+
+    <script>
+      // Global app configuration injected from server
+      window.APP_MODE = '<?= mode ?>';
+      window.APP_TOKEN = '<?= typeof token !== "undefined" ? token : "" ?>';
+    </script>
+    <?!= include('ClientJS'); ?>
+  </body>
+</html>

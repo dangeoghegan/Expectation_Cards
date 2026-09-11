@@ -1,0 +1,22 @@
+# Google Apps Script Specific
+.clasp.json
+.claspignore
+
+# Node
+node_modules/
+npm-debug.log
+
+# Environment variables (do not commit secrets)
+.env
+.env.local
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Generated files
+dist/
+build/

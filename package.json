@@ -1,0 +1,17 @@
+{
+  "name": "expectation-cards",
+  "version": "1.0.0",
+  "description": "Mobile-first Google Apps Script application for tracking student expectations.",
+  "main": "src/Code.js",
+  "scripts": {
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "deploy": "clasp deploy"
+  },
+  "keywords": ["google", "apps", "script", "classroom", "gemini"],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}

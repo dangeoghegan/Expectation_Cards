@@ -1,0 +1,25 @@
+{
+  "sampleTranscript": "Okay Jimmy, so by the end of this lesson I need you to have finished sanding the main body of the chair. Make sure you use the 120 grit paper first, and then the 240 grit so it's perfectly smooth. Also, you have to remember to put the tools back in the cabinet when you are done. If you get all that done, we can start on the varnish next lesson.",
+  "expectedCardOutput": {
+    "title": "Chair Sanding Expectations",
+    "timingInfo": "By the end of this lesson",
+    "teacherNote": "Looking forward to starting varnish next lesson!",
+    "tasks": [
+      {
+        "id": "task-1",
+        "text": "Finish sanding the main body of the chair",
+        "substeps": [
+          { "id": "sub-1-1", "text": "Use 120 grit paper first" },
+          { "id": "sub-1-2", "text": "Use 240 grit paper second" }
+        ]
+      },
+      {
+        "id": "task-2",
+        "text": "Put the tools back in the cabinet when you are done"
+      }
+    ],
+    "successCriteria": [
+      { "id": "crit-1", "text": "The chair body is perfectly smooth" }
+    ]
+  }
+}
