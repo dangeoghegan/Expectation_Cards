@@ -109,7 +109,7 @@ const Config = {
   },
 
   getAppBaseUrl() {
-    return this.get('APP_BASE_URL') || ScriptApp.getService().getUrl() || '';
+    return this.get('APP_BASE_URL') || ScriptApp.getService().getUrl() || 'https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec';
   },
 
   getGeminiApiKey() {
@@ -189,6 +189,63 @@ function doGet(e) {
   }
 }
 
+/**
+ * Web App HTTP POST Endpoint (supports external RPC callers and headless automation).
+ */
+function doPost(e) {
+  try {
+    let payload = {};
+    if (e && e.postData && e.postData.contents) {
+      try {
+        payload = JSON.parse(e.postData.contents);
+      } catch (pErr) {
+        payload = {};
+      }
+    }
+
+    const funcName = payload.funcName || (e && e.parameter && e.parameter.funcName);
+    const args = payload.args || [];
+
+    const publicMethods = {
+      getCurrentUser: () => getCurrentUser(),
+      getAppBootstrapData: () => getAppBootstrapData(),
+      getTeacherCourses: () => getTeacherCourses(),
+      getCourseRoster: (cId) => getCourseRoster(cId),
+      getTasksForClass: (cId) => getTasksForClass(cId),
+      getGroupsForClass: (cId) => getGroupsForClass(cId),
+      getTeacherCards: (f) => getTeacherCards(f),
+      getCard: (id) => getCard(id),
+      createDraftCard: (data) => createDraftCard(data),
+      postCardToClassroom: (id) => postCardToClassroom(id),
+      retryCardDelivery: (id) => retryCardDelivery(id),
+      archiveCard: (id) => archiveCard(id),
+      duplicateCard: (id) => duplicateCard(id),
+      getStudentCard: (id, t) => getStudentCard(id, t),
+      acknowledgeCard: (id, txt) => acknowledgeCard(id, txt),
+      transcribeAudio: (d) => transcribeAudio(d),
+      generateExpectationsFromTranscript: (d) => generateExpectationsFromTranscript(d),
+      getSettings: () => getSettings(),
+      saveSettings: (s) => saveSettings(s)
+    };
+
+    if (funcName && publicMethods[funcName]) {
+      const result = publicMethods[funcName].apply(null, args);
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    } else {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        error: { message: `RPC function '${funcName}' not supported or not found.` }
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      error: { message: err.message || 'doPost execution error' }
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
 // ============================================================================
 // SECTION 3: AUTHORISATION AND IDENTITY
 // ============================================================================
@@ -242,6 +299,14 @@ function isUserTeacher_(email) {
   if (!email) return false;
   const allowlist = Config.getTeacherAllowlist();
   const domain = Config.getAllowedDomain();
+
+  // If user is the creator/effective user of the script, always authorize
+  try {
+    const effectiveEmail = Session.getEffectiveUser().getEmail().toLowerCase().trim();
+    if (effectiveEmail && effectiveEmail === email) {
+      return true;
+    }
+  } catch (e) {}
 
   // If both allowlist and domain are empty, default to active user being teacher (initial setup)
   if (allowlist.length === 0 && !domain) {
@@ -490,11 +555,30 @@ const ClassroomHelper = {
    */
   listCourses() {
     try {
-      const response = Classroom.Courses.list({
-        courseStates: ['ACTIVE'],
-        teacherId: 'me'
-      });
-      return (response.courses || []).map(course => ({
+      let response = null;
+      try {
+        response = Classroom.Courses.list({
+          courseStates: ['ACTIVE'],
+          teacherId: 'me',
+          pageSize: 50
+        });
+      } catch (teacherErr) {
+        console.warn('Teacher-scoped course list encountered error, querying active courses:', teacherErr);
+        response = Classroom.Courses.list({
+          courseStates: ['ACTIVE'],
+          pageSize: 50
+        });
+      }
+
+      let courses = (response && response.courses) || [];
+      if (courses.length === 0) {
+        try {
+          const generalResp = Classroom.Courses.list({ pageSize: 50 });
+          courses = (generalResp && generalResp.courses) || [];
+        } catch (e) {}
+      }
+
+      return courses.map(course => ({
         id: course.id,
         name: course.name,
         section: course.section || '',
@@ -503,7 +587,7 @@ const ClassroomHelper = {
       }));
     } catch (err) {
       console.error('Error in ClassroomHelper.listCourses:', err);
-      throw new Error('Unable to list Google Classroom courses. Ensure the Classroom Advanced Service and API are enabled.');
+      throw new Error(`Unable to list Google Classroom courses: ${err.message}. Ensure the Google Classroom API is enabled under Services and in the Google Cloud Console.`);
     }
   },
 

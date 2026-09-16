@@ -3,7 +3,31 @@
 A production-ready, mobile-first Google Apps Script web application for high-school teachers to record spoken expectations during one-on-one or small group conversations, use Google Gemini to generate structured checklists, and deliver actionable expectation cards directly to students via Google Classroom.
 
 - **Repository:** `https://github.com/dangeoghegan/Expectation_Cards.git`
-- **Web App URL:** `https://script.google.com/macros/s/AKfycbycd4kyX91auYKE8qlxaM3QUQ-bA7O4VSFWQOr_1Op4aHBHftcNTDU3l-dotUQCVzGUNw/exec`
+- **Active Web App (GAS URL):** `https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec`
+
+### 📍 Google Apps Script (GAS) URL Locations in Codebase
+For future reference and updates, the GAS Web App URL is maintained in the following locations:
+1. **`index.html` (Top Configuration):** Inside `<script>`, under `window.CONFIG.GAS_WEB_APP_URL` (Line ~1050).
+2. **`index.html` (HTML Meta Tag):** Inside `<head>`, `<meta name="gas-web-app-url" content="...">` (Line ~10).
+3. **`index.html` (UI Buttons & Links):** Top header action link `id="btn-open-gas-app"`, Step 1 connection banner `id="link-open-gas-step1"`, and the Settings modal input `id="settings-gas-url"`.
+4. **`Code.gs` (Server Default):** `Config.getAppBaseUrl()` fallback (Line ~112).
+5. **`server.js` (Dev Server Config):** `db.settings.appBaseUrl` and `db.settings.gasWebAppUrl` (Line ~14).
+
+---
+
+## 🔑 Google Classroom API Live Access
+- **Authentication Requirement:** Google Classroom API endpoints (`Classroom.Courses.list` and `Classroom.Courses.Students.list`) execute with the credentials of the logged-in user (`Execute as: User accessing the web app`).
+- **Live Classroom vs. Preview Sandbox:**
+  - When accessing the app via the **Active Web App URL** (`https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec`), `google.script.run` connects directly to the teacher's live Google Workspace session and queries their active courses and student rosters.
+  - When accessing the app in the local/cloud preview sandbox, live Google auth tokens cannot be read directly from an unauthenticated iframe container, so the app displays a prominent status banner and "Open in Google Classroom" link leading straight to the authenticated web app.
+- **Required Google Cloud & Apps Script Services:**
+  - **Apps Script Services:** `Classroom v1` (Identifier: `Classroom`) and `Drive v2` (Identifier: `Drive`).
+  - **Google Cloud Console APIs:** Ensure the linked GCP project has the **Google Classroom API** (`classroom.googleapis.com`) enabled.
+  - **OAuth Scopes in `appsscript.json`:**
+    - `https://www.googleapis.com/auth/classroom.courses.readonly`
+    - `https://www.googleapis.com/auth/classroom.rosters.readonly`
+    - `https://www.googleapis.com/auth/classroom.coursework.students`
+    - `https://www.googleapis.com/auth/classroom.profile.emails`
 
 ---
 

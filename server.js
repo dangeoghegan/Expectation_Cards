@@ -11,7 +11,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // In-Memory Database Store (Emulating Google Sheets & Classroom Backend)
 const db = {
   settings: {
-    appBaseUrl: 'http://localhost:3000',
+    appBaseUrl: 'https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec',
+    gasWebAppUrl: 'https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec',
     allowedDomain: 'school.edu.au',
     audioRetentionDays: 30,
     deleteAudioAfterTranscription: true,
