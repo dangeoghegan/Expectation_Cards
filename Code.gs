@@ -166,6 +166,77 @@ function doGet(e) {
     const cardId = params.card || '';
     const token = params.token || '';
 
+    // Direct Test Action: Allows instant Classroom coursework delivery for testing dummy classes without selecting students
+    if (params.action === 'test') {
+      let targetCourseId = params.courseId || '';
+      if (!targetCourseId) {
+        try {
+          const coursesResp = Classroom.Courses.list({ teacherId: 'me', courseStates: ['ACTIVE'] });
+          const courses = (coursesResp && coursesResp.courses) || [];
+          if (courses.length > 0) {
+            const dummyCourse = courses.find(c => /test|dummy|demo|trial/i.test(c.name)) || courses[0];
+            targetCourseId = dummyCourse.id;
+          }
+        } catch (cErr) {
+          console.warn('Could not auto-detect course:', cErr);
+        }
+      }
+
+      if (!targetCourseId) {
+        return HtmlService.createHtmlOutput(`
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Classroom Test</title>
+          <style>body{font-family:system-ui,-apple-system,sans-serif;padding:2rem;background:#f8fafc;color:#0f172a;}.box{max-width:560px;margin:2rem auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:2rem;box-shadow:0 4px 12px rgba(0,0,0,0.05);}.btn{display:inline-block;padding:0.75rem 1.25rem;background:#1a73e8;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;margin-top:1rem;}</style>
+          </head>
+          <body><div class="box"><h2 style="color:#d93025;margin-bottom:0.75rem;">No Active Google Classroom Course Detected</h2><p style="color:#475569;line-height:1.5;">To run a delivery test, make sure you are logged into Google with an account enrolled as a teacher in at least one Google Classroom course.</p><a href="https://classroom.google.com" target="_blank" class="btn">Open Google Classroom &rarr;</a></div></body></html>
+        `).setTitle('Classroom Test - No Course Found').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      }
+
+      const testResult = testClassroomDelivery(targetCourseId);
+      if (testResult && testResult.ok) {
+        const link = (testResult.data && testResult.data.alternateLink) || 'https://classroom.google.com';
+        return HtmlService.createHtmlOutput(`
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Classroom Test Delivery Successful</title>
+          <style>
+            body{font-family:system-ui,-apple-system,sans-serif;padding:2rem 1rem;background:#f8fafc;color:#0f172a;}
+            .box{max-width:580px;margin:2rem auto;background:#fff;border:1px solid #10b981;border-radius:12px;padding:2rem;box-shadow:0 4px 16px rgba(16,185,129,0.12);}
+            .badge{display:inline-block;background:#ecfdf5;color:#065f46;font-size:0.85rem;font-weight:600;padding:0.35rem 0.75rem;border-radius:9999px;margin-bottom:1rem;}
+            h1{font-size:1.35rem;color:#065f46;margin-bottom:0.6rem;}
+            p{color:#475569;font-size:0.95rem;line-height:1.6;margin-bottom:1.25rem;}
+            .btn{display:inline-flex;align-items:center;justify-content:center;background:#1a73e8;color:#fff;padding:0.75rem 1.4rem;border-radius:6px;text-decoration:none;font-weight:600;font-size:0.95rem;}
+            .btn:hover{background:#1557b0;}
+            .btn-sec{background:#f1f5f9;color:#334155;margin-left:0.5rem;}
+          </style>
+          </head>
+          <body>
+            <div class="box">
+              <span class="badge">✅ Google Classroom Test Successful</span>
+              <h1>Test Coursework Created in Google Classroom!</h1>
+              <p>
+                <strong>Delivery Mode:</strong> Whole Class (<code>ALL_STUDENTS</code>)<br>
+                <strong>Item:</strong> ${sanitiseHtml_(testResult.data.title || 'Task Expectations Test Delivery')}<br>
+                <strong>Status:</strong> Published directly to your Google Classroom dummy class without requiring any individual student accounts.
+              </p>
+              <div>
+                <a href="${link}" target="_blank" class="btn">Open Coursework in Classroom &rarr;</a>
+                <a href="${Config.getAppBaseUrl()}" class="btn btn-sec">&larr; Return to Dashboard</a>
+              </div>
+            </div>
+          </body>
+          </html>
+        `).setTitle('Classroom Test Delivery Successful').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      } else {
+        const errMsg = (testResult && testResult.error && testResult.error.message) || 'Unknown delivery error';
+        return HtmlService.createHtmlOutput(`
+          <!DOCTYPE html><html><head><meta charset="utf-8"><title>Test Failed</title><style>body{font-family:sans-serif;padding:2rem;background:#f8fafc;}.box{max-width:560px;margin:2rem auto;background:#fff;border:1px solid #ef4444;border-radius:12px;padding:2rem;}</style></head>
+          <body><div class="box"><h2 style="color:#b91c1c;">Test Coursework Failed</h2><p style="color:#475569;">${sanitiseHtml_(errMsg)}</p><a href="${Config.getAppBaseUrl()}" style="display:inline-block;margin-top:1rem;padding:8px 16px;background:#1a73e8;color:#fff;border-radius:6px;text-decoration:none;">&larr; Back to App</a></div></body></html>
+        `).setTitle('Test Delivery Error').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      }
+    }
+
     // Search for HTML file across Apps Script naming variations (case-sensitive in GAS)
     const fileCandidates = ['index', 'Index', 'index.html', 'Index.html', 'src/Index', 'src/index'];
     let template = null;
@@ -301,7 +372,8 @@ function doPost(e) {
       transcribeAudio: (d) => transcribeAudio(d),
       generateExpectationsFromTranscript: (d) => generateExpectationsFromTranscript(d),
       getSettings: () => getSettings(),
-      saveSettings: (s) => saveSettings(s)
+      saveSettings: (s) => saveSettings(s),
+      testClassroomDelivery: (cId) => testClassroomDelivery(cId)
     };
 
     if (funcName && publicMethods[funcName]) {
@@ -874,9 +946,15 @@ function createDraftCard(payload) {
       SheetHelper.appendRow(CONFIG.SHEET_NAMES.CARDS, rowData);
     }
 
-    // Save recipients if supplied
+    // Save recipients if supplied, or default to entire class test recipient
     if (Array.isArray(payload.recipients) && payload.recipients.length > 0) {
       saveCardRecipients_(cardId, payload.classId, payload.recipients);
+    } else {
+      saveCardRecipients_(cardId, payload.classId, [{
+        userId: 'ALL_STUDENTS',
+        email: 'all@classroom.local',
+        name: 'Entire Class / Test Recipient'
+      }]);
     }
 
     logAuditEvent(isUpdate ? 'DRAFT_UPDATED' : 'DRAFT_CREATED', {
@@ -1062,13 +1140,21 @@ function postCardToClassroom(cardId) {
     if (cards.length === 0) throw new Error('Card not found.');
     const card = cards[0];
 
-    const recipients = SheetHelper.getAllRowsAsObjects(CONFIG.SHEET_NAMES.CARD_RECIPIENTS).filter(r => r.CardId === cardId);
+    let recipients = SheetHelper.getAllRowsAsObjects(CONFIG.SHEET_NAMES.CARD_RECIPIENTS).filter(r => r.CardId === cardId);
     if (recipients.length === 0) {
-      throw new Error('Cannot send card: No recipients are assigned to this card.');
+      // Auto-assign entire class test recipient so testing is never blocked
+      saveCardRecipients_(cardId, card.ClassId, [{
+        userId: 'ALL_STUDENTS',
+        email: 'all@classroom.local',
+        name: 'Entire Class / Test Recipient'
+      }]);
+      recipients = SheetHelper.getAllRowsAsObjects(CONFIG.SHEET_NAMES.CARD_RECIPIENTS).filter(r => r.CardId === cardId);
     }
 
     const now = new Date().toISOString();
-    const studentUserIds = recipients.map(r => r.StudentGoogleUserId).filter(Boolean);
+    const isWholeClass = recipients.some(r => r.StudentGoogleUserId === 'ALL_STUDENTS' || r.StudentEmail === 'all@classroom.local');
+    // If whole class, studentUserIds = [] -> Classroom API creates coursework with assigneeMode: 'ALL_STUDENTS'
+    const studentUserIds = isWholeClass ? [] : recipients.map(r => r.StudentGoogleUserId).filter(id => id && id !== 'ALL_STUDENTS');
 
     // Build the secure, unguessable student card link
     const baseUrl = Config.getAppBaseUrl();
@@ -1153,6 +1239,43 @@ function postCardToClassroom(cardId) {
     });
   } catch (err) {
     return handleServerError(err, 'postCardToClassroom');
+  }
+}
+
+/**
+ * Test function: posts an instant test coursework item to a Google Classroom course.
+ * Does not require selecting a specific student (assigns to ALL_STUDENTS).
+ * Returns the created coursework id and alternateLink for immediate teacher verification.
+ */
+function testClassroomDelivery(courseId) {
+  try {
+    validateTeacherAccess();
+    if (!courseId) throw new Error('Classroom Course ID is required for testing.');
+
+    const baseUrl = Config.getAppBaseUrl();
+    const testCardId = 'test-' + generateUuid_().substring(0, 8);
+    const testUrl = `${baseUrl}?mode=student&card=${encodeURIComponent(testCardId)}`;
+
+    const title = '🧪 Task Expectations Test Delivery';
+    const summary = 'Test expectation card created to verify Google Classroom API integration for entire class (no student selection required).';
+
+    // Post with assigneeMode: 'ALL_STUDENTS' (empty array)
+    const courseWork = ClassroomHelper.createCourseWorkItem(
+      courseId,
+      title,
+      summary,
+      testUrl,
+      []
+    );
+
+    return successResponse({
+      courseWorkId: courseWork.id,
+      alternateLink: courseWork.alternateLink || '',
+      title: courseWork.title,
+      message: 'Test coursework successfully published to Google Classroom!'
+    });
+  } catch (err) {
+    return handleServerError(err, 'testClassroomDelivery');
   }
 }
 

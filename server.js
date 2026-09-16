@@ -20,6 +20,7 @@ const db = {
     geminiApiKey: process.env.GEMINI_API_KEY || ''
   },
   courses: [
+    { id: 'course-dummy-test', name: '🧪 My Google Classroom (Dummy Test Class)', section: 'Period 1 (Test)', room: 'Room 101' },
     { id: 'course-101', name: 'Year 10 Design & Technology', section: 'Period 2', room: 'Workshop 3' },
     { id: 'course-102', name: 'Year 11 Industrial Technology (Timber)', section: 'Period 4', room: 'Timber Lab' },
     { id: 'course-103', name: 'Year 9 STEM Workshop', section: 'Period 1', room: 'Room 12' }
@@ -297,8 +298,22 @@ const rpcHandlers = {
         status: 'SENT',
         classroomCourseWorkId: card.classroomCourseWorkId,
         classroomAlternateLink: card.classroomAlternateLink,
-        recipientCount: card.recipients.length,
+        recipientCount: (card.recipients || []).length,
         message: 'Card posted to Google Classroom.'
+      }
+    };
+  },
+
+  testClassroomDelivery(courseId) {
+    const course = db.courses.find(c => c.id === courseId) || { name: 'Test Course' };
+    const cwId = 'cw-test-' + Date.now();
+    return {
+      ok: true,
+      data: {
+        courseWorkId: cwId,
+        alternateLink: 'https://classroom.google.com',
+        title: '🧪 Task Expectations Test Delivery',
+        message: `Test coursework successfully published to Google Classroom for ${course.name}!`
       }
     };
   },
