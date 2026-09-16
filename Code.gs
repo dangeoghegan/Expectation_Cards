@@ -166,7 +166,83 @@ function doGet(e) {
     const cardId = params.card || '';
     const token = params.token || '';
 
-    const template = HtmlService.createTemplateFromFile('index');
+    // Search for HTML file across Apps Script naming variations (case-sensitive in GAS)
+    const fileCandidates = ['index', 'Index', 'index.html', 'Index.html', 'src/Index', 'src/index'];
+    let template = null;
+
+    for (let i = 0; i < fileCandidates.length; i++) {
+      try {
+        template = HtmlService.createTemplateFromFile(fileCandidates[i]);
+        if (template) break;
+      } catch (candidateErr) {
+        // Continue checking next candidate
+      }
+    }
+
+    if (!template) {
+      // Friendly setup prompt if HTML file has not yet been added to the Apps Script project
+      return HtmlService.createHtmlOutput(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Task Expectations - Setup Required</title>
+          <style>
+            :root {
+              --primary: #1e40af;
+              --primary-light: #eff6ff;
+              --text: #0f172a;
+              --muted: #475569;
+              --border: #e2e8f0;
+              --bg: #f8fafc;
+              --success: #059669;
+            }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 2rem 1rem; line-height: 1.5; }
+            .container { max-width: 680px; margin: 0 auto; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+            .status-banner { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; color: #065f46; font-size: 0.95rem; }
+            h1 { font-size: 1.35rem; margin-bottom: 0.5rem; color: var(--text); }
+            p { color: var(--muted); font-size: 0.95rem; margin-bottom: 1rem; }
+            ol { padding-left: 1.25rem; margin-bottom: 1.5rem; color: var(--text); font-size: 0.925rem; }
+            li { margin-bottom: 0.75rem; }
+            code { background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.875rem; color: #0f172a; font-family: ui-monospace, monospace; border: 1px solid #e2e8f0; }
+            .btn { display: inline-flex; align-items: center; justify-content: center; background: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-size: 0.9rem; font-weight: 500; cursor: pointer; text-decoration: none; }
+            .btn:hover { opacity: 0.9; }
+            .note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #92400e; margin-top: 1rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="status-banner">
+              <span style="font-size: 1.5rem;">✅</span>
+              <div>
+                <strong>Authorisation & Backend Script Active!</strong><br>
+                <code>Code.gs</code> is successfully running in your Google Workspace environment.
+              </div>
+            </div>
+            <h1>One Final Step: Add the Frontend HTML File</h1>
+            <p>Google Apps Script requires the HTML interface file (<code>index.html</code>) to be present in your Apps Script project editor to render the dashboard:</p>
+            <ol>
+              <li>Open your Google Apps Script project at <a href="https://script.google.com" target="_blank" rel="noopener noreferrer" style="color: var(--primary); font-weight: 600;">script.google.com</a> (or in your Sheet: <strong>Extensions &gt; Apps Script</strong>).</li>
+              <li>In the left sidebar, click the <strong>+</strong> icon next to <strong>Files</strong> and select <strong>HTML</strong>.</li>
+              <li>Type <code>index</code> as the file name and press Enter (Apps Script will create <code>index.html</code>).</li>
+              <li>Copy the entire content of <code>index.html</code> (or <code>Index.html</code>) from your GitHub repository and paste it into the editor.</li>
+              <li>Click the <strong>Save</strong> icon (💾).</li>
+              <li>Click <strong>Deploy &gt; Manage deployments</strong>, click the <strong>Edit (pencil)</strong> icon, select <strong>New version</strong> from the Version dropdown, and click <strong>Deploy</strong>.</li>
+            </ol>
+            <div class="note">
+              💡 <strong>Why does this happen?</strong> Google Apps Script projects require both the server script (<code>Code.gs</code>) and the frontend template (<code>index.html</code>) in the project files list. Once added and saved as a new version, refresh this page to load the full application!
+            </div>
+            <div style="margin-top: 1.5rem; text-align: right;">
+              <button type="button" class="btn" onclick="window.location.reload();">🔄 Refresh Page</button>
+            </div>
+          </div>
+        </body>
+        </html>
+      `).setTitle('Task Expectations - Setup Required').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+
     template.mode = mode;
     template.cardId = cardId;
     template.token = token;

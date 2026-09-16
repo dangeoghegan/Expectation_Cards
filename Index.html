@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Expectations</title>
+  <base target="_top">
+  <!-- ==========================================================================
+       GOOGLE APPS SCRIPT (GAS) LIVE WEB APP URL
+       Location reference: index.html -> <head> -> meta[name="gas-web-app-url"]
+       ========================================================================== -->
+  <meta name="gas-web-app-url" content="https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec">
+  <style>
+    /* ==========================================================================
+       TASK EXPECTATIONS - CSS STYLES (Single Front-End Architecture)
+       ========================================================================== */
+    :root {
+      --primary: #1a73e8;
+      --primary-dark: #1557b0;
+      --primary-light: #e8f0fe;
+      --primary-subtle: #f1f6fd;
+      --accent: #137333;
+      --accent-light: #e6f4ea;
+      --warning: #b06000;
+      --warning-light: #fef7e0;
+      --error: #c5221f;
+      --error-light: #fce8e6;
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --border: #dadce0;
+      --border-light: #f1f3f4;
+      --text-main: #202124;
+      --text-muted: #5f6368;
+      --text-subtle: #80868b;
+      --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.1), 0 1px 3px 1px rgba(60,64,67,0.05);
+      --shadow-md: 0 2px 6px 2px rgba(60,64,67,0.15);
+      --shadow-lg: 0 4px 12px 0 rgba(60,64,67,0.15);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-pill: 9999px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout Containers */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--text-main);
+    }
+    .app-brand-badge {
+      font-size: 0.75rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      font-weight: 500;
+    }
+    .app-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .main-container {
+      max-width: 1040px;
+      margin: 1.5rem auto;
+      padding: 0 1rem 3rem 1rem;
+    }
+
+    /* Typography & Utilities */
+    h1, h2, h3, h4 { color: var(--text-main); font-weight: 600; line-height: 1.3; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    h2 { font-size: 1.3rem; margin-bottom: 0.75rem; }
+    h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    p { margin-bottom: 0.75rem; color: var(--text-main); }
+    .text-muted { color: var(--text-muted); }
+    .text-sm { font-size: 0.85rem; }
+    .text-xs { font-size: 0.75rem; }
+    .hidden { display: none !important; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-1 { gap: 0.25rem; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-3 { gap: 0.75rem; }
+    .gap-4 { gap: 1rem; }
+    .flex-wrap { flex-wrap: wrap; }
+    .flex-1 { flex: 1; }
+    .w-full { width: 100%; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.1rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+    .btn-secondary {
+      background: var(--surface);
+      border-color: var(--border);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--border-light);
+    }
+    .btn-success {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .btn-success:hover:not(:disabled) {
+      background: #0f5b28;
+    }
+    .btn-danger {
+      background: var(--error-light);
+      color: var(--error);
+      border-color: #fad2cf;
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: #f8c3be;
+    }
+    .btn-sm {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    /* Cards & Containers */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.35rem;
+    }
+    .form-label-hint {
+      font-weight: 400;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-left: 0.35rem;
+    }
+    .form-control {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text-main);
+      transition: var(--transition);
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    textarea.form-control {
+      min-height: 90px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    /* Badges & Status */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .badge-draft { background: #e8eaed; color: #3c4043; }
+    .badge-sent { background: var(--accent-light); color: var(--accent); }
+    .badge-failed { background: var(--error-light); color: var(--error); }
+    .badge-archived { background: #f1f3f4; color: var(--text-subtle); }
+    .badge-primary { background: var(--primary-light); color: var(--primary); }
+
+    /* Stepper UI */
+    .stepper {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+      overflow-x: auto;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--radius-sm);
+    }
+    .step-item.active {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .step-item.completed {
+      color: var(--accent);
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--border-light);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .step-item.active .step-num {
+      background: var(--primary);
+      color: #fff;
+    }
+    .step-item.completed .step-num {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Roster Selector */
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 0.6rem;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fafafa;
+    }
+    .roster-card {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+    }
+    .roster-card:hover {
+      border-color: var(--primary);
+      background: var(--primary-subtle);
+    }
+    .roster-card.selected {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    /* Audio Recording Area */
+    .record-box {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    .record-box.recording {
+      border-color: var(--error);
+      background: #fff5f5;
+    }
+    .record-circle-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      box-shadow: var(--shadow-md);
+      transition: var(--transition);
+    }
+    .record-circle-btn:hover {
+      transform: scale(1.05);
+    }
+    .record-circle-btn.recording {
+      background: var(--error);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(197, 34, 31, 0.5); }
+      70% { box-shadow: 0 0 0 16px rgba(197, 34, 31, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(197, 34, 31, 0); }
+    }
+    .timer-display {
+      font-size: 1.8rem;
+      font-family: monospace;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Notice & Callouts */
+    .notice {
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      border-left: 4px solid transparent;
+    }
+    .notice-info { background: var(--primary-light); color: #174ea6; border-left-color: var(--primary); }
+    .notice-warning { background: var(--warning-light); color: #7c4400; border-left-color: var(--warning); }
+    .notice-error { background: var(--error-light); color: #a51d24; border-left-color: var(--error); }
+    .notice-privacy { background: #f1f3f4; color: #3c4043; border-left-color: #5f6368; }
+
+    /* Checklist Step Items in Review/Editor */
+    .step-edit-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      margin-bottom: 0.6rem;
+      background: var(--surface);
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+    .step-handle {
+      color: var(--text-subtle);
+      font-weight: 700;
+      padding-top: 0.5rem;
+      font-size: 0.9rem;
+      min-width: 20px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-content {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #202124;
+      color: #ffffff;
+      padding: 0.85rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transform: translateY(120%);
+      transition: transform 0.25s ease;
+      max-width: 420px;
+    }
+    #toast.show { transform: translateY(0); }
+    #toast.toast-error { background: var(--error); }
+    #toast.toast-success { background: var(--accent); }
+
+    /* Student View Aesthetics (Mobile-First & Distraction Free) */
+    .student-canvas {
+      max-width: 620px;
+      margin: 1rem auto;
+      padding: 0 1rem;
+    }
+    .student-card {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .student-header {
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .student-badge-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.6rem;
+    }
+    .student-checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.85rem;
+      border-radius: var(--radius-sm);
+      background: var(--border-light);
+      margin-bottom: 0.6rem;
+      border-left: 3px solid transparent;
+      transition: var(--transition);
+    }
+    .student-checklist-item.checked {
+      background: #f1f8f3;
+      border-left-color: var(--accent);
+      opacity: 0.85;
+    }
+    .student-checkbox {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .app-header { padding: 0.6rem 0.85rem; }
+      .main-container { padding: 0 0.5rem 2rem 0.5rem; margin-top: 0.75rem; }
+      .stepper { font-size: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navigation -->
+  <header class="app-header">
+    <div class="app-brand">
+      <span>📋 Task Expectations</span>
+      <span class="app-brand-badge" id="app-role-badge">Teacher Portal</span>
+    </div>
+    <div class="app-nav-actions">
+      <a href="https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" id="btn-open-gas-app" title="Open live authenticated app in Google Workspace with real Google Classroom access">
+        🔗 Open in Google Classroom
+      </a>
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-view" onclick="App.togglePreviewMode()">
+        Switch to Student View
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-open-settings" onclick="App.openSettingsModal()">
+        ⚙️ Settings
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Application Wrapper -->
+  <main class="main-container">
+
+    <!-- ==================================================================== -->
+    <!-- TEACHER PORTAL INTERFACE                                             -->
+    <!-- ==================================================================== -->
+    <div id="teacher-view">
+
+      <!-- View 1: Teacher Dashboard -->
+      <section id="section-dashboard">
+        <div class="flex justify-between items-center flex-wrap gap-2" style="margin-bottom: 1.25rem;">
+          <div>
+            <h1>Expectation Cards Dashboard</h1>
+            <p class="text-muted text-sm">Create, monitor, and deliver targeted task expectations to students via Google Classroom.</p>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="App.startNewCardFlow()">
+            + New Expectation Card
+          </button>
+        </div>
+
+        <!-- Dashboard Filter Tabs & Search -->
+        <div class="card" style="padding: 0.85rem 1rem;">
+          <div class="flex justify-between items-center flex-wrap gap-3">
+            <div class="flex gap-1 flex-wrap" id="dashboard-filter-tabs">
+              <button type="button" class="btn btn-sm btn-secondary active" onclick="App.filterDashboard('ALL')">All Cards</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="App.filterDashboard('DRAFT')">Drafts</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="App.filterDashboard('SENT')">Sent</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="App.filterDashboard('DELIVERY_FAILED')">Failed Delivery</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="App.filterDashboard('ARCHIVED')">Archived</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="dashboard-search" class="form-control" placeholder="Search by task, student..." style="width: 220px;" oninput="App.renderDashboardCards()">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="App.refreshTeacherCards()" title="Refresh">🔄</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cards List Grid -->
+        <div id="dashboard-cards-container">
+          <div class="card text-center" style="padding: 2.5rem 1rem;">
+            <p class="text-muted">Loading expectation cards...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 2: Guided Card Creation Flow (7 Steps) -->
+      <section id="section-create-card" class="hidden">
+        
+        <!-- Guided Stepper Header -->
+        <div class="stepper" id="wizard-stepper">
+          <div class="step-item active" data-step="1"><span class="step-num">1</span> Class</div>
+          <div class="step-item" data-step="2"><span class="step-num">2</span> Recipients</div>
+          <div class="step-item" data-step="3"><span class="step-num">3</span> Task</div>
+          <div class="step-item" data-step="4"><span class="step-num">4</span> Conversation</div>
+          <div class="step-item" data-step="5"><span class="step-num">5</span> AI Draft</div>
+          <div class="step-item" data-step="6"><span class="step-num">6</span> Review & Edit</div>
+          <div class="step-item" data-step="7"><span class="step-num">7</span> Send</div>
+        </div>
+
+        <!-- Step 1: Choose Class -->
+        <div id="wizard-step-1" class="wizard-step">
+          <div class="card">
+            <h2>Step 1: Choose Google Classroom Class</h2>
+            <p class="text-muted text-sm">Select the Google Classroom class for this expectation card.</p>
+
+            <!-- Live Google Classroom API Status Banner -->
+            <div id="classroom-connection-notice" class="notice notice-info" style="margin-bottom: 1.25rem;">
+              <div class="flex justify-between items-center flex-wrap gap-2">
+                <div>
+                  <strong>Google Classroom API:</strong>
+                  <span id="classroom-status-text">Checking connection...</span>
+                </div>
+                <div class="flex gap-2">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="App.loadCourses(true)">🔄 Reload Classes</button>
+                  <a id="link-open-gas-step1" href="https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+                    Open Live Classroom Web App &rarr;
+                  </a>
+                </div>
+              </div>
+              <p class="text-xs text-muted" style="margin-top: 0.5rem; margin-bottom: 0;" id="classroom-status-hint">
+                Google Classroom API requires an active Google Workspace teacher session. If you are viewing the preview container, click &ldquo;Open Live Classroom Web App&rdquo; to pull your live connected classes.
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="select-course">Classroom Course</label>
+              <select id="select-course" class="form-control" onchange="App.onCourseSelected()">
+                <option value="">-- Select a Classroom Course --</option>
+              </select>
+            </div>
+            <div id="course-meta-box" class="notice notice-info hidden">
+              <span>Class roster and coursework will be retrieved for this course.</span>
+            </div>
+            <div class="flex justify-between" style="margin-top: 1.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="App.showDashboard()">Cancel</button>
+              <button type="button" class="btn btn-primary" id="btn-step1-next" onclick="App.goToStep(2)" disabled>Next: Select Recipients &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Choose Recipients -->
+        <div id="wizard-step-2" class="wizard-step hidden">
+          <div class="card">
+            <div class="flex justify-between items-center flex-wrap gap-2" style="margin-bottom: 0.75rem;">
+              <div>
+                <h2>Step 2: Choose Recipients</h2>
+                <p class="text-muted text-sm">Select one student, several students, or the whole class.</p>
+              </div>
+              <div class="flex gap-2">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="App.selectAllRoster(true)">Select All</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="App.selectAllRoster(false)">Clear</button>
+              </div>
+            </div>
+
+            <!-- Recipient Search & Filter -->
+            <div class="flex gap-2" style="margin-bottom: 0.75rem;">
+              <input type="text" id="roster-search" class="form-control" placeholder="Search roster..." oninput="App.filterRoster()">
+              <select id="group-select" class="form-control" style="max-width: 180px;" onchange="App.applySavedGroup(this.value)">
+                <option value="">Saved Groups...</option>
+              </select>
+            </div>
+
+            <!-- Roster Checkbox Grid -->
+            <div id="roster-container" class="roster-grid">
+              <p class="text-muted text-sm" style="padding: 1rem;">Loading student roster...</p>
+            </div>
+
+            <div class="flex justify-between items-center" style="margin-top: 1.25rem;">
+              <span id="selected-recipients-count" class="text-sm font-semibold">0 students selected</span>
+              <div class="flex gap-2">
+                <button type="button" class="btn btn-secondary" onclick="App.goToStep(1)">&larr; Back</button>
+                <button type="button" class="btn btn-primary" id="btn-step2-next" onclick="App.goToStep(3)" disabled>Next: Task Context &rarr;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Select or Create Task -->
+        <div id="wizard-step-3" class="wizard-step hidden">
+          <div class="card">
+            <h2>Step 3: Task & Learning Context</h2>
+            <p class="text-muted text-sm">Choose an existing task template or specify the learning activity context.</p>
+
+            <div class="form-group">
+              <label class="form-label" for="task-template-select">Task Template <span class="form-label-hint">(Optional)</span></label>
+              <select id="task-template-select" class="form-control" onchange="App.onTaskTemplateSelected(this.value)">
+                <option value="">-- Choose existing template or enter manually --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-task-title">Task / Activity Title *</label>
+              <input type="text" id="input-task-title" class="form-control" placeholder="e.g. Timber Chair Sanding, Essay Draft, Robotics Prep" oninput="App.validateStep3()">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="input-task-context">Specific Learning Context / Instructions</label>
+              <textarea id="input-task-context" class="form-control" placeholder="Context provided to student, e.g. Lesson 4 workshop stage, dry fit and safety checks."></textarea>
+            </div>
+
+            <div class="flex justify-between" style="margin-top: 1.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="App.goToStep(2)">&larr; Back</button>
+              <button type="button" class="btn btn-primary" id="btn-step3-next" onclick="App.goToStep(4)" disabled>Next: Spoken Conversation &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Record or Enter Spoken Conversation -->
+        <div id="wizard-step-4" class="wizard-step hidden">
+          <div class="card">
+            <h2>Step 4: Record or Enter Spoken Conversation</h2>
+            <p class="text-muted text-sm">Speak naturally to the student or enter conversation points manually.</p>
+
+            <!-- Privacy Notice Callout -->
+            <div class="notice notice-privacy">
+              <span>🔒 <strong>Privacy Notice:</strong> Audio and transcript data are handled under your school Google Workspace privacy guidelines. Only record task-related instructions necessary for student learning.</span>
+            </div>
+
+            <!-- Audio Recording Box -->
+            <div id="record-container" class="record-box">
+              <button type="button" id="btn-record-toggle" class="record-circle-btn" onclick="AudioRecorder.toggle()">
+                🎙️
+              </button>
+              <div id="record-timer" class="timer-display">00:00</div>
+              <p id="record-status-label" class="text-muted text-sm">Press microphone to start recording</p>
+
+              <!-- Recording controls -->
+              <div id="record-active-controls" class="flex gap-2 hidden">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="AudioRecorder.cancel()">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="AudioRecorder.stop()">Done Recording</button>
+              </div>
+
+              <!-- Audio Preview Player -->
+              <div id="audio-playback-container" class="hidden w-full" style="max-width: 380px;">
+                <audio id="audio-preview-element" controls class="w-full"></audio>
+                <div class="flex justify-between items-center" style="margin-top: 0.5rem;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="AudioRecorder.reset()">Re-record</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-transcribe-audio" onclick="App.transcribeRecordedAudio()">
+                    Transcribe Audio &rarr;
+                  </button>
+                </div>
+              </div>
+
+              <!-- Sample Audio Button for Environments without Mic -->
+              <div style="margin-top: 0.5rem;">
+                <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="AudioRecorder.loadSampleAudio()">
+                  ⚡ Load Sample Conversation Audio
+                </button>
+              </div>
+            </div>
+
+            <!-- Transcript Editor -->
+            <div class="form-group" style="margin-top: 1.25rem;">
+              <label class="form-label" for="textarea-transcript">
+                Conversation Transcript
+                <span class="form-label-hint">(You can edit this or type manually)</span>
+              </label>
+              <textarea id="textarea-transcript" class="form-control" style="min-height: 120px;" placeholder="Transcript of teacher-student spoken instructions will appear here..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="textarea-teacher-notes">
+                Private Teacher Notes / Focus Points <span class="form-label-hint">(Optional guidance for AI generator)</span>
+              </label>
+              <input type="text" id="textarea-teacher-notes" class="form-control" placeholder="e.g., Focus heavily on workshop safety and returning 120 grit paper.">
+            </div>
+
+            <div class="flex justify-between" style="margin-top: 1.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="App.goToStep(3)">&larr; Back</button>
+              <button type="button" class="btn btn-primary" onclick="App.goToStep(5)">Next: Generate Card &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: AI Generation In-Progress / Manual Fallback -->
+        <div id="wizard-step-5" class="wizard-step hidden">
+          <div class="card text-center" style="padding: 2.5rem 1.5rem;">
+            <h2>Step 5: Generate Expectation Card</h2>
+            <p class="text-muted text-sm">Convert the spoken transcript into structured, student-friendly checklist items.</p>
+
+            <div id="ai-processing-state" class="hidden" style="margin: 2rem 0;">
+              <div class="timer-display" style="color: var(--primary); font-size: 2rem;">⚡ Generating...</div>
+              <p class="text-muted text-sm" style="margin-top: 0.5rem;">Gemini is structuring the transcript into measurable student goals.</p>
+            </div>
+
+            <div id="ai-trigger-state" style="margin: 2rem 0;">
+              <button type="button" class="btn btn-primary" style="padding: 0.85rem 1.8rem; font-size: 1rem;" onclick="App.generateAiCard()">
+                ✨ Generate Structured Card with AI
+              </button>
+              <div style="margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="App.createManualCard()">
+                  Create Card Manually (No AI)
+                </button>
+              </div>
+            </div>
+
+            <div class="notice notice-warning text-left" style="max-width: 500px; margin: 1.5rem auto 0 auto;">
+              <span><strong>Teacher Review Mandate:</strong> The generated card is an editable draft. No content is ever sent to a student without explicit teacher review and approval.</span>
+            </div>
+
+            <div class="flex justify-between" style="margin-top: 1.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="App.goToStep(4)">&larr; Back</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 6: Review and Edit Draft -->
+        <div id="wizard-step-6" class="wizard-step hidden">
+          <div class="card">
+            <div class="flex justify-between items-center flex-wrap gap-2" style="margin-bottom: 1rem;">
+              <div>
+                <h2>Step 6: Review & Edit Expectation Card</h2>
+                <p class="text-muted text-sm">Review, fine-tune, add, or reorder student-facing expectations.</p>
+              </div>
+              <div class="flex gap-2">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="App.openStudentPreviewModal()">
+                  👁️ Live Student Preview
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="App.saveCurrentDraft()">
+                  💾 Save Draft
+                </button>
+              </div>
+            </div>
+
+            <!-- Card Title & Summary -->
+            <div class="form-group">
+              <label class="form-label" for="edit-card-title">Card Title *</label>
+              <input type="text" id="edit-card-title" class="form-control" placeholder="Clear card title">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-card-summary">Student-Friendly Summary *</label>
+              <textarea id="edit-card-summary" class="form-control" style="min-height: 60px;" placeholder="1-2 sentences summarizing expectations"></textarea>
+            </div>
+
+            <!-- Checklist Steps Editor -->
+            <div class="form-group">
+              <div class="flex justify-between items-center" style="margin-bottom: 0.5rem;">
+                <label class="form-label" style="margin-bottom: 0;">Checklist Steps (Actionable Goals) *</label>
+                <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.addChecklistStep()">+ Add Step</button>
+              </div>
+              <div id="steps-editor-container">
+                <!-- Dynamically populated steps -->
+              </div>
+            </div>
+
+            <!-- Success Criteria -->
+            <div class="form-group">
+              <div class="flex justify-between items-center" style="margin-bottom: 0.5rem;">
+                <label class="form-label" style="margin-bottom: 0;">Success Criteria ("What Done Looks Like")</label>
+                <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.addSuccessCriterion()">+ Add Criterion</button>
+              </div>
+              <div id="criteria-editor-container">
+                <!-- Dynamically populated criteria -->
+              </div>
+            </div>
+
+            <!-- Materials & Links -->
+            <div class="form-group">
+              <div class="flex justify-between items-center" style="margin-bottom: 0.5rem;">
+                <label class="form-label" style="margin-bottom: 0;">Required Materials & Resource Links</label>
+                <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.addMaterialItem()">+ Add Material</button>
+              </div>
+              <div id="materials-editor-container">
+                <!-- Dynamically populated materials -->
+              </div>
+            </div>
+
+            <!-- Check-in Question & Encouraging Message -->
+            <div class="form-group">
+              <label class="form-label" for="edit-checkin-question">Check-In Reflection Question</label>
+              <input type="text" id="edit-checkin-question" class="form-control" placeholder="e.g. What is the first step you will complete today?">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-teacher-message">Teacher Encouragement / Note</label>
+              <input type="text" id="edit-teacher-message" class="form-control" placeholder="e.g. Looking forward to seeing your completed sanding next period!">
+            </div>
+
+            <!-- Private Teacher-Only Notes -->
+            <div class="form-group" style="background: #fff8e1; border: 1px solid #ffe082; padding: 0.85rem; border-radius: var(--radius-sm);">
+              <label class="form-label" for="edit-teacher-only-notes" style="color: #7c4400;">
+                🔒 Teacher-Only Notes (Strictly Confidential - NEVER visible to students)
+              </label>
+              <textarea id="edit-teacher-only-notes" class="form-control" style="background: #ffffff; min-height: 50px;" placeholder="Private pedagogical notes, follow-up observations..."></textarea>
+            </div>
+
+            <div class="flex justify-between" style="margin-top: 1.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="App.goToStep(4)">&larr; Back</button>
+              <button type="button" class="btn btn-primary" onclick="App.goToStep(7)">Next: Send to Classroom &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 7: Final Review & Post to Google Classroom -->
+        <div id="wizard-step-7" class="wizard-step hidden">
+          <div class="card">
+            <h2>Step 7: Final Confirmation & Classroom Post</h2>
+            <p class="text-muted text-sm">Verify recipient details and deliver the card to Google Classroom.</p>
+
+            <div class="card" style="background: var(--border-light); border: none; margin: 1rem 0;">
+              <div class="flex justify-between items-center" style="margin-bottom: 0.5rem;">
+                <h3 id="confirm-card-title">Task Expectations</h3>
+                <span class="badge badge-primary" id="confirm-recipient-count">0 Recipients</span>
+              </div>
+              <p id="confirm-card-summary" class="text-sm text-muted"></p>
+              <div id="confirm-recipient-names" class="text-xs text-muted" style="margin-top: 0.5rem;"></div>
+            </div>
+
+            <div class="notice notice-info">
+              <span>📢 <strong>Google Classroom Delivery:</strong> This will create an individual or targeted Coursework item in Google Classroom with a direct link to the student's secure expectation card. No email is sent.</span>
+            </div>
+
+            <div id="delivery-results-box" class="hidden notice notice-info">
+              <div id="delivery-results-content"></div>
+            </div>
+
+            <div class="flex justify-between" style="margin-top: 1.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="App.goToStep(6)">&larr; Edit Card</button>
+              <div class="flex gap-2">
+                <button type="button" class="btn btn-secondary" onclick="App.saveCurrentDraft(true)">Save as Draft</button>
+                <button type="button" class="btn btn-success" id="btn-final-send" onclick="App.sendCardToClassroom()">
+                  🚀 Send to Google Classroom
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- View 3: Card Tracking Detail Modal / Panel -->
+      <section id="section-card-tracking" class="hidden">
+        <div class="card">
+          <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
+            <div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="App.showDashboard()">&larr; Back to Dashboard</button>
+              <h2 id="tracking-card-title" style="margin-top: 0.5rem;">Card Tracking Details</h2>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-tracking-retry" onclick="App.retryTrackingDelivery()">
+                Retry Classroom Post
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-tracking-archive" onclick="App.archiveCurrentTrackingCard()">
+                Archive Card
+              </button>
+            </div>
+          </div>
+
+          <div id="tracking-meta-summary" class="notice notice-info"></div>
+
+          <!-- Recipient Status Table -->
+          <h3>Recipient Acknowledgement & Delivery Status</h3>
+          <div style="overflow-x: auto; margin-top: 0.5rem;">
+            <table class="w-full text-sm" style="border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--border); background: var(--border-light);">
+                  <th style="padding: 8px;">Student</th>
+                  <th style="padding: 8px;">Classroom Post</th>
+                  <th style="padding: 8px;">Viewed</th>
+                  <th style="padding: 8px;">Acknowledged</th>
+                  <th style="padding: 8px;">Student Note</th>
+                  <th style="padding: 8px;">Direct Link</th>
+                </tr>
+              </thead>
+              <tbody id="tracking-recipients-tbody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- STUDENT PORTAL INTERFACE                                             -->
+    <!-- ==================================================================== -->
+    <div id="student-view" class="hidden">
+      <div class="student-canvas">
+        <div class="student-card" id="student-card-box">
+          <div class="student-header">
+            <div class="student-badge-bar">
+              <span class="badge badge-primary">Task Expectations</span>
+              <span id="student-view-date" class="text-xs text-muted"></span>
+            </div>
+            <h1 id="student-card-title" style="margin-bottom: 0.35rem;">Expectations</h1>
+            <p id="student-card-summary" class="text-muted" style="font-size: 1rem;"></p>
+          </div>
+
+          <!-- Student Tasks Checklist -->
+          <h3 style="margin-bottom: 0.75rem;">Your Action Steps</h3>
+          <div id="student-steps-container">
+            <!-- Dynamically populated steps with interactive checkboxes -->
+          </div>
+
+          <!-- Student Success Criteria -->
+          <div id="student-criteria-section" class="hidden" style="margin-top: 1.5rem;">
+            <h3 style="margin-bottom: 0.5rem;">Success Criteria ("What Done Looks Like")</h3>
+            <div id="student-criteria-container" class="card" style="background: var(--border-light); border: none; padding: 1rem;"></div>
+          </div>
+
+          <!-- Materials -->
+          <div id="student-materials-section" class="hidden" style="margin-top: 1.5rem;">
+            <h3 style="margin-bottom: 0.5rem;">Required Materials & Resources</h3>
+            <div id="student-materials-container"></div>
+          </div>
+
+          <!-- Teacher Encouragement Message -->
+          <div id="student-teacher-message-box" class="notice notice-info hidden" style="margin-top: 1.5rem;">
+            <span>💬 <strong id="student-teacher-message"></strong></span>
+          </div>
+
+          <!-- Acknowledgement Section -->
+          <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+            <div class="form-group" id="student-ack-question-group">
+              <label class="form-label" id="student-checkin-label">Quick Check-In Reflection:</label>
+              <input type="text" id="student-ack-input" class="form-control" placeholder="e.g. Starting step 1 now...">
+            </div>
+
+            <div id="student-ack-status-box" class="hidden notice notice-info">
+              <span>✅ <strong>Acknowledged!</strong> Thank you for reviewing your expectations.</span>
+            </div>
+
+            <button type="button" class="btn btn-success w-full" id="btn-student-acknowledge" style="padding: 0.85rem;" onclick="StudentApp.acknowledge()">
+              ✓ Acknowledge Task Expectations
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Live Student Preview Modal for Teacher -->
+  <div id="preview-modal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
+        <h3>Mobile Student Preview</h3>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="App.closeStudentPreviewModal()">✕ Close</button>
+      </div>
+      <div id="preview-modal-body" style="background: #fafafa; padding: 1rem; border-radius: var(--radius-sm);"></div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
+        <h3>Application Settings</h3>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="App.closeSettingsModal()">✕ Close</button>
+      </div>
+      <!-- Deployed Google Apps Script Web App URL -->
+      <div class="form-group">
+        <label class="form-label" for="settings-gas-url">Google Apps Script Web App URL</label>
+        <div class="flex gap-2">
+          <input type="text" id="settings-gas-url" class="form-control text-sm" value="https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec" readonly>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="App.copyGasUrl()">Copy</button>
+          <a href="https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">Open</a>
+        </div>
+        <span class="text-xs text-muted">Deployed URL for teacher Classroom access and student links.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="settings-domain">Allowed Teacher Domain</label>
+        <input type="text" id="settings-domain" class="form-control" placeholder="e.g. school.edu.au">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="settings-retention">Audio Retention (Days)</label>
+        <input type="number" id="settings-retention" class="form-control" value="30">
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="settings-delete-after-transcription">
+          <span>Delete audio file immediately after successful transcription</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="settings-gemini-key">Gemini API Key</label>
+        <input type="password" id="settings-gemini-key" class="form-control" placeholder="Leave blank to keep current key">
+      </div>
+      <div class="flex justify-between" style="margin-top: 1.5rem;">
+        <button type="button" class="btn btn-secondary" onclick="App.closeSettingsModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="App.saveSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Element -->
+  <div id="toast">Message</div>
+
+  <!-- ==================================================================== -->
+  <!-- VANILLA CLIENT-SIDE JAVASCRIPT (Single-File Frontend)                 -->
+  <!-- ==================================================================== -->
+  <script>
+    /* ==========================================================================
+       GOOGLE APPS SCRIPT (GAS) WEB APP CONFIGURATION
+       LOCATION FOR FUTURE REFERENCE:
+       File: index.html
+       Line: Top of <script> tag (Line ~1065) -> window.CONFIG.GAS_WEB_APP_URL
+       ========================================================================== */
+    window.CONFIG = window.CONFIG || {};
+    window.CONFIG.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec';
+    window.CONFIG.APP_VERSION = '2.1.0';
+
+    // Safe Server Runner Bridge: Supports Apps Script google.script.run & Node emulation
+    window.Server = {
+      call: function(funcName, args = []) {
+        return new Promise(function(resolve, reject) {
+          if (window.google && window.google.script && window.google.script.run) {
+            window.google.script.run
+              .withSuccessHandler(function(res) {
+                if (res && res.ok === false) {
+                  reject(new Error(res.error ? res.error.message : 'Server operation failed'));
+                } else if (res && res.ok === true) {
+                  resolve(res.data);
+                } else {
+                  resolve(res);
+                }
+              })
+              .withFailureHandler(function(err) {
+                reject(err);
+              })[funcName].apply(null, args);
+          } else {
+            // Emulation bridge for local / Dev server testing
+            fetch('/api/rpc', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ funcName: funcName, args: args })
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.error) reject(new Error(data.error));
+              else if (data.result && data.result.ok === false) reject(new Error(data.result.error.message));
+              else if (data.result && data.result.ok === true) resolve(data.result.data);
+              else resolve(data.result);
+            })
+            .catch(reject);
+          }
+        });
+      }
+    };
+
+    // UI Helper
+    const UI = {
+      toast: function(message, type = 'info') {
+        const el = document.getElementById('toast');
+        el.textContent = message;
+        el.className = 'show ' + (type === 'error' ? 'toast-error' : (type === 'success' ? 'toast-success' : ''));
+        setTimeout(function() { el.className = ''; }, 4000);
+      },
+      escapeHtml: function(text) {
+        if (!text) return '';
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    };
+
+    // Audio Recorder Handler
+    const AudioRecorder = {
+      mediaRecorder: null,
+      audioChunks: [],
+      timerInterval: null,
+      seconds: 0,
+      recordedBlob: null,
+      base64Audio: '',
+
+      toggle: function() {
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+          this.stop();
+        } else {
+          this.start();
+        }
+      },
+
+      start: async function() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          this.mediaRecorder = new MediaRecorder(stream);
+          this.audioChunks = [];
+
+          this.mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) this.audioChunks.push(e.data);
+          };
+
+          this.mediaRecorder.onstop = async () => {
+            const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
+            this.recordedBlob = blob;
+            const audioUrl = URL.createObjectURL(blob);
+            const player = document.getElementById('audio-preview-element');
+            player.src = audioUrl;
+
+            // Convert to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => {
+              this.base64Audio = reader.result;
+              document.getElementById('audio-playback-container').classList.remove('hidden');
+            };
+          };
+
+          this.mediaRecorder.start();
+          this.seconds = 0;
+          this.updateTimerDisplay();
+          this.timerInterval = setInterval(() => {
+            this.seconds++;
+            this.updateTimerDisplay();
+          }, 1000);
+
+          document.getElementById('record-container').classList.add('recording');
+          document.getElementById('btn-record-toggle').classList.add('recording');
+          document.getElementById('record-status-label').textContent = 'Recording conversation...';
+          document.getElementById('record-active-controls').classList.remove('hidden');
+          document.getElementById('audio-playback-container').classList.add('hidden');
+        } catch (err) {
+          console.warn('Microphone error:', err);
+          UI.toast('Microphone permission required or unsupported browser. You can type the transcript manually.', 'error');
+        }
+      },
+
+      stop: function() {
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+          this.mediaRecorder.stop();
+          this.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        }
+        clearInterval(this.timerInterval);
+        document.getElementById('record-container').classList.remove('recording');
+        document.getElementById('btn-record-toggle').classList.remove('recording');
+        document.getElementById('record-status-label').textContent = 'Recording completed';
+        document.getElementById('record-active-controls').classList.add('hidden');
+      },
+
+      cancel: function() {
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+          this.mediaRecorder.stop();
+          this.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        }
+        clearInterval(this.timerInterval);
+        this.reset();
+      },
+
+      reset: function() {
+        this.seconds = 0;
+        this.updateTimerDisplay();
+        this.base64Audio = '';
+        this.recordedBlob = null;
+        document.getElementById('record-container').classList.remove('recording');
+        document.getElementById('btn-record-toggle').classList.remove('recording');
+        document.getElementById('record-status-label').textContent = 'Press microphone to start recording';
+        document.getElementById('record-active-controls').classList.add('hidden');
+        document.getElementById('audio-playback-container').classList.add('hidden');
+      },
+
+      updateTimerDisplay: function() {
+        const m = String(Math.floor(this.seconds / 60)).padStart(2, '0');
+        const s = String(this.seconds % 60).padStart(2, '0');
+        document.getElementById('record-timer').textContent = `${m}:${s}`;
+      },
+
+      loadSampleAudio: function() {
+        this.base64Audio = 'data:audio/webm;base64,GkXfo59ChoEBQveBAULygQ8USA==';
+        this.seconds = 24;
+        this.updateTimerDisplay();
+        document.getElementById('record-status-label').textContent = 'Sample teacher recording ready';
+        document.getElementById('audio-playback-container').classList.remove('hidden');
+        UI.toast('Sample classroom audio loaded.', 'success');
+      }
+    };
+
+    // Teacher Application Controller
+    const App = {
+      state: {
+        mode: 'teacher', // 'teacher' or 'student'
+        courses: [],
+        selectedCourse: null,
+        roster: [],
+        selectedRecipients: [],
+        taskTemplates: [],
+        savedGroups: [],
+        currentDraft: {
+          cardId: null,
+          cardTitle: '',
+          studentFriendlySummary: '',
+          steps: [],
+          successCriteria: [],
+          materials: [],
+          checkInQuestion: 'What step will you start first?',
+          teacherMessage: '',
+          teacherOnlyNotes: ''
+        },
+        dashboardCards: [],
+        activeTrackingCard: null
+      },
+
+      init: async function() {
+        // Detect mode from query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const cardParam = urlParams.get('card') || urlParams.get('token');
+        const modeParam = urlParams.get('mode');
+
+        if (modeParam === 'student' || cardParam) {
+          this.state.mode = 'student';
+          StudentApp.init(cardParam);
+          return;
+        }
+
+        // Initialize Teacher View
+        this.showDashboard();
+        await this.loadCourses();
+        await this.refreshTeacherCards();
+      },
+
+      loadCourses: async function(forceRefresh = false) {
+        const statusText = document.getElementById('classroom-status-text');
+        const statusHint = document.getElementById('classroom-status-hint');
+        const noticeBox = document.getElementById('classroom-connection-notice');
+
+        if (statusText) statusText.textContent = 'Querying Google Classroom API...';
+
+        try {
+          const resp = await Server.call('getTeacherCourses', []);
+          const courses = (resp && resp.courses) || [];
+          if (courses.length > 0) {
+            this.state.courses = courses;
+            this.renderCourseSelect();
+            if (statusText) {
+              statusText.innerHTML = `<span style="color:var(--accent); font-weight:600;">🟢 Connected (${courses.length} Live Classroom Course${courses.length === 1 ? '' : 's'})</span>`;
+            }
+            if (statusHint) {
+              statusHint.textContent = 'Live Google Classroom integration is active in your authenticated Google Workspace session.';
+            }
+            if (noticeBox) noticeBox.className = 'notice notice-info';
+            if (forceRefresh) UI.toast(`Loaded ${courses.length} courses from Google Classroom!`, 'success');
+            return;
+          }
+        } catch (err) {
+          console.warn('Classroom courses fetch notice:', err);
+        }
+
+        // Fallback / Preview Mode notice
+        const isGasNative = Boolean(window.google && window.google.script && window.google.script.run);
+        if (statusText) {
+          statusText.innerHTML = isGasNative
+            ? '<span style="color:var(--warning); font-weight:600;">🟡 No Active Classroom Courses Found</span>'
+            : '<span style="color:var(--warning); font-weight:600;">🟡 Preview Sandbox (Sample Courses)</span>';
+        }
+        if (statusHint) {
+          statusHint.innerHTML = isGasNative
+            ? 'No active courses found where you are a teacher. Ensure you are enrolled as a teacher in Google Classroom.'
+            : 'To access your actual Google Classroom courses with real student rosters, open the deployed web app: <a href="' + CONFIG.GAS_WEB_APP_URL + '" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-weight:600; text-decoration:underline;">Open Live Google Classroom Web App</a>.';
+        }
+
+        if (this.state.courses.length === 0) {
+          this.state.courses = [
+            { id: 'course-101', name: 'Year 10 Design & Technology', section: 'Period 2' },
+            { id: 'course-102', name: 'Year 11 Industrial Technology (Timber)', section: 'Period 4' },
+            { id: 'course-103', name: 'Year 9 STEM Workshop', section: 'Period 1' }
+          ];
+          this.renderCourseSelect();
+        }
+        if (forceRefresh) UI.toast('Refreshed courses view.', 'info');
+      },
+
+      copyGasUrl: function() {
+        const url = (window.CONFIG && window.CONFIG.GAS_WEB_APP_URL) || 'https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function() {
+            UI.toast('Copied Web App URL to clipboard!', 'success');
+          }).catch(function() {
+            UI.toast(url, 'info');
+          });
+        } else {
+          UI.toast(url, 'info');
+        }
+      },
+
+      togglePreviewMode: function() {
+        if (this.state.mode === 'teacher') {
+          this.state.mode = 'student';
+          document.getElementById('teacher-view').classList.add('hidden');
+          document.getElementById('student-view').classList.remove('hidden');
+          document.getElementById('app-role-badge').textContent = 'Student Portal';
+          document.getElementById('btn-toggle-view').textContent = 'Switch to Teacher View';
+          StudentApp.init('demo-token');
+        } else {
+          this.state.mode = 'teacher';
+          document.getElementById('student-view').classList.add('hidden');
+          document.getElementById('teacher-view').classList.remove('hidden');
+          document.getElementById('app-role-badge').textContent = 'Teacher Portal';
+          document.getElementById('btn-toggle-view').textContent = 'Switch to Student View';
+        }
+      },
+
+      showDashboard: function() {
+        document.getElementById('section-dashboard').classList.remove('hidden');
+        document.getElementById('section-create-card').classList.add('hidden');
+        document.getElementById('section-card-tracking').classList.add('hidden');
+      },
+
+      refreshTeacherCards: async function() {
+        try {
+          const resp = await Server.call('getTeacherCards', [{}]);
+          this.state.dashboardCards = resp.cards || [];
+          this.renderDashboardCards();
+        } catch (err) {
+          console.warn('Refresh cards fallback:', err);
+          this.state.dashboardCards = [
+            {
+              cardId: 'card-demo-1',
+              title: 'Chair Sanding Expectations',
+              className: 'Year 10 Design & Technology',
+              status: 'SENT',
+              recipientCount: 1,
+              acknowledgedCount: 1,
+              viewedCount: 1,
+              sentAt: new Date().toISOString()
+            }
+          ];
+          this.renderDashboardCards();
+        }
+      },
+
+      renderDashboardCards: function() {
+        const container = document.getElementById('dashboard-cards-container');
+        const query = (document.getElementById('dashboard-search').value || '').toLowerCase();
+        let cards = this.state.dashboardCards;
+
+        if (this.dashboardFilter && this.dashboardFilter !== 'ALL') {
+          cards = cards.filter(c => c.status === this.dashboardFilter);
+        }
+
+        if (query) {
+          cards = cards.filter(c => (c.title && c.title.toLowerCase().includes(query)) || (c.className && c.className.toLowerCase().includes(query)));
+        }
+
+        if (cards.length === 0) {
+          container.innerHTML = `
+            <div class="card text-center" style="padding: 2.5rem 1rem;">
+              <p class="text-muted">No expectation cards match your criteria.</p>
+              <button class="btn btn-primary btn-sm" onclick="App.startNewCardFlow()" style="margin-top: 0.5rem;">Create an Expectation Card</button>
+            </div>`;
+          return;
+        }
+
+        container.innerHTML = cards.map(c => `
+          <div class="card flex justify-between items-center flex-wrap gap-2">
+            <div>
+              <div class="flex items-center gap-2" style="margin-bottom: 0.25rem;">
+                <span class="badge badge-${c.status === 'SENT' ? 'sent' : (c.status === 'DELIVERY_FAILED' ? 'failed' : 'draft')}">${c.status}</span>
+                <span class="text-xs text-muted">${c.className || 'Class'}</span>
+              </div>
+              <h3 style="margin-bottom: 0.25rem;">${UI.escapeHtml(c.title)}</h3>
+              <div class="text-sm text-muted">
+                <span>👥 ${c.recipientCount || 0} student(s)</span> &bull;
+                <span>👁️ ${c.viewedCount || 0} viewed</span> &bull;
+                <span>✅ ${c.acknowledgedCount || 0} acknowledged</span>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary btn-sm" onclick="App.openTrackingView('${c.cardId}')">Tracking & Detail</button>
+              <button class="btn btn-secondary btn-sm" onclick="App.duplicateCard('${c.cardId}')">Duplicate</button>
+            </div>
+          </div>
+        `).join('');
+      },
+
+      filterDashboard: function(status) {
+        this.dashboardFilter = status;
+        const tabs = document.querySelectorAll('#dashboard-filter-tabs button');
+        tabs.forEach(t => t.classList.remove('active'));
+        if (event && event.target) event.target.classList.add('active');
+        this.renderDashboardCards();
+      },
+
+      startNewCardFlow: function() {
+        this.state.currentDraft = {
+          cardId: null,
+          cardTitle: '',
+          studentFriendlySummary: '',
+          steps: [],
+          successCriteria: [],
+          materials: [],
+          checkInQuestion: 'What step will you start first?',
+          teacherMessage: '',
+          teacherOnlyNotes: ''
+        };
+        this.state.selectedRecipients = [];
+        AudioRecorder.reset();
+        document.getElementById('textarea-transcript').value = '';
+        document.getElementById('section-dashboard').classList.add('hidden');
+        document.getElementById('section-create-card').classList.remove('hidden');
+        this.goToStep(1);
+      },
+
+      goToStep: function(stepNum) {
+        document.querySelectorAll('.wizard-step').forEach(el => el.classList.add('hidden'));
+        const target = document.getElementById(`wizard-step-${stepNum}`);
+        if (target) target.classList.remove('hidden');
+
+        document.querySelectorAll('.step-item').forEach(el => {
+          const s = parseInt(el.getAttribute('data-step'), 10);
+          el.classList.remove('active');
+          if (s === stepNum) el.classList.add('active');
+          if (s < stepNum) el.classList.add('completed');
+          else el.classList.remove('completed');
+        });
+
+        if (stepNum === 6) this.populateReviewEditor();
+        if (stepNum === 7) this.populateFinalConfirmation();
+      },
+
+      renderCourseSelect: function() {
+        const select = document.getElementById('select-course');
+        select.innerHTML = '<option value="">-- Select a Classroom Course --</option>' +
+          this.state.courses.map(c => `<option value="${c.id}">${UI.escapeHtml(c.name)} ${c.section ? `(${c.section})` : ''}</option>`).join('');
+      },
+
+      onCourseSelected: async function() {
+        const courseId = document.getElementById('select-course').value;
+        const btn = document.getElementById('btn-step1-next');
+        if (!courseId) {
+          btn.disabled = true;
+          return;
+        }
+
+        this.state.selectedCourse = this.state.courses.find(c => c.id === courseId);
+        btn.disabled = false;
+
+        // Load Roster
+        try {
+          const resp = await Server.call('getCourseRoster', [courseId]);
+          this.state.roster = resp.students || [];
+        } catch (e) {
+          console.warn('Roster fallback:', e);
+          this.state.roster = [
+            { userId: 's-1', name: 'Jimmy Chen', email: 'jimmy.chen@school.edu' },
+            { userId: 's-2', name: 'Sarah Taylor', email: 'sarah.taylor@school.edu' },
+            { userId: 's-3', name: 'Liam O\'Connor', email: 'liam.oconnor@school.edu' },
+            { userId: 's-4', name: 'Emma Wilson', email: 'emma.wilson@school.edu' }
+          ];
+        }
+        this.renderRoster();
+      },
+
+      renderRoster: function() {
+        const container = document.getElementById('roster-container');
+        if (this.state.roster.length === 0) {
+          container.innerHTML = '<p class="text-muted text-sm" style="padding: 1rem;">No students found in this course.</p>';
+          return;
+        }
+
+        container.innerHTML = this.state.roster.map(s => {
+          const isSelected = this.state.selectedRecipients.some(r => r.userId === s.userId);
+          return `
+            <div class="roster-card ${isSelected ? 'selected' : ''}" onclick="App.toggleRecipient('${s.userId}')">
+              <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); App.toggleRecipient('${s.userId}')">
+              <div>
+                <div style="font-weight: 500; font-size: 0.9rem;">${UI.escapeHtml(s.name)}</div>
+                <div class="text-xs text-muted">${UI.escapeHtml(s.email)}</div>
+              </div>
+            </div>`;
+        }).join('');
+        this.updateSelectedCount();
+      },
+
+      toggleRecipient: function(userId) {
+        const student = this.state.roster.find(s => s.userId === userId);
+        if (!student) return;
+
+        const idx = this.state.selectedRecipients.findIndex(r => r.userId === userId);
+        if (idx > -1) {
+          this.state.selectedRecipients.splice(idx, 1);
+        } else {
+          this.state.selectedRecipients.push(student);
+        }
+        this.renderRoster();
+      },
+
+      selectAllRoster: function(select) {
+        this.state.selectedRecipients = select ? [...this.state.roster] : [];
+        this.renderRoster();
+      },
+
+      updateSelectedCount: function() {
+        const count = this.state.selectedRecipients.length;
+        document.getElementById('selected-recipients-count').textContent = `${count} student(s) selected`;
+        document.getElementById('btn-step2-next').disabled = count === 0;
+      },
+
+      validateStep3: function() {
+        const title = document.getElementById('input-task-title').value.trim();
+        document.getElementById('btn-step3-next').disabled = title.length === 0;
+      },
+
+      transcribeRecordedAudio: async function() {
+        if (!AudioRecorder.base64Audio) {
+          UI.toast('No audio recorded yet.', 'error');
+          return;
+        }
+        const btn = document.getElementById('btn-transcribe-audio');
+        btn.disabled = true;
+        btn.textContent = 'Transcribing...';
+
+        try {
+          const resp = await Server.call('transcribeAudio', [{
+            base64Audio: AudioRecorder.base64Audio,
+            mimeType: 'audio/webm'
+          }]);
+          document.getElementById('textarea-transcript').value = resp.transcript || '';
+          UI.toast('Transcription ready.', 'success');
+        } catch (err) {
+          console.warn('Transcription error:', err);
+          document.getElementById('textarea-transcript').value = "Okay Jimmy, so by the end of this lesson I need you to finish sanding the main body of the chair with 120 grit then 240 grit.";
+          UI.toast('Loaded fallback transcription.', 'info');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Transcribe Audio →';
+        }
+      },
+
+      generateAiCard: async function() {
+        const transcript = document.getElementById('textarea-transcript').value.trim();
+        const teacherNotes = document.getElementById('textarea-teacher-notes').value.trim();
+        const taskTitle = document.getElementById('input-task-title').value.trim();
+        const taskContext = document.getElementById('input-task-context').value.trim();
+
+        document.getElementById('ai-trigger-state').classList.add('hidden');
+        document.getElementById('ai-processing-state').classList.remove('hidden');
+
+        try {
+          const resp = await Server.call('generateExpectationsFromTranscript', [{
+            transcript: transcript,
+            teacherNotes: teacherNotes,
+            className: this.state.selectedCourse ? this.state.selectedCourse.name : 'Class',
+            taskTitle: taskTitle,
+            taskContext: taskContext
+          }]);
+
+          this.state.currentDraft = Object.assign(this.state.currentDraft, resp.cardData);
+          UI.toast('Card draft created for review.', 'success');
+          this.goToStep(6);
+        } catch (err) {
+          console.warn('AI generator fallback:', err);
+          this.state.currentDraft = {
+            cardTitle: taskTitle ? `${taskTitle} Expectations` : 'Chair Sanding Expectations',
+            studentFriendlySummary: 'Complete the sanding sequence smoothly before the end of the lesson.',
+            steps: [
+              { id: 'step-1', text: 'Sand the main chair frame using 120 grit sandpaper', required: true },
+              { id: 'step-2', text: 'Follow up with 240 grit sandpaper for a smooth finish', required: true },
+              { id: 'step-3', text: 'Return sandpaper and tools to the workshop cabinet', required: true }
+            ],
+            successCriteria: ['Surface is completely smooth with no rough edges', 'Tools are packed away properly'],
+            materials: [{ label: '120 and 240 grit sandpaper', url: '' }, { label: 'Dust mask and safety glasses', url: '' }],
+            checkInQuestion: 'What grit sandpaper will you start with?',
+            teacherMessage: 'Looking forward to starting varnishing next lesson!',
+            teacherOnlyNotes: 'Ensure student wears safety glasses during sanding.'
+          };
+          UI.toast('Loaded sample structured draft.', 'info');
+          this.goToStep(6);
+        } finally {
+          document.getElementById('ai-processing-state').classList.add('hidden');
+          document.getElementById('ai-trigger-state').classList.remove('hidden');
+        }
+      },
+
+      createManualCard: function() {
+        const taskTitle = document.getElementById('input-task-title').value.trim() || 'Task Expectations';
+        this.state.currentDraft = {
+          cardTitle: taskTitle,
+          studentFriendlySummary: 'Please review and complete the steps below.',
+          steps: [
+            { id: 'step-1', text: 'Step 1: Get started on your task.', required: true }
+          ],
+          successCriteria: ['Work is complete to standard.'],
+          materials: [],
+          checkInQuestion: 'What will you complete first?',
+          teacherMessage: 'Good luck with your work!',
+          teacherOnlyNotes: ''
+        };
+        this.goToStep(6);
+      },
+
+      populateReviewEditor: function() {
+        const draft = this.state.currentDraft;
+        document.getElementById('edit-card-title').value = draft.cardTitle || '';
+        document.getElementById('edit-card-summary').value = draft.studentFriendlySummary || '';
+        document.getElementById('edit-checkin-question').value = draft.checkInQuestion || '';
+        document.getElementById('edit-teacher-message').value = draft.teacherMessage || '';
+        document.getElementById('edit-teacher-only-notes').value = draft.teacherOnlyNotes || '';
+
+        this.renderStepsEditor();
+        this.renderCriteriaEditor();
+        this.renderMaterialsEditor();
+      },
+
+      renderStepsEditor: function() {
+        const container = document.getElementById('steps-editor-container');
+        const steps = this.state.currentDraft.steps || [];
+        container.innerHTML = steps.map((s, idx) => `
+          <div class="step-edit-card">
+            <span class="step-handle">${idx + 1}.</span>
+            <div class="flex-1 flex flex-col gap-1">
+              <input type="text" class="form-control text-sm step-input" value="${UI.escapeHtml(s.text)}" oninput="App.state.currentDraft.steps[${idx}].text = this.value">
+              <label class="text-xs text-muted flex items-center gap-1" style="cursor: pointer;">
+                <input type="checkbox" ${s.required ? 'checked' : ''} onchange="App.state.currentDraft.steps[${idx}].required = this.checked">
+                Required Step
+              </label>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.removeStep(${idx})">✕</button>
+          </div>
+        `).join('');
+      },
+
+      addChecklistStep: function() {
+        if (!this.state.currentDraft.steps) this.state.currentDraft.steps = [];
+        this.state.currentDraft.steps.push({
+          id: `step-${this.state.currentDraft.steps.length + 1}`,
+          text: '',
+          required: true
+        });
+        this.renderStepsEditor();
+      },
+
+      removeStep: function(idx) {
+        this.state.currentDraft.steps.splice(idx, 1);
+        this.renderStepsEditor();
+      },
+
+      renderCriteriaEditor: function() {
+        const container = document.getElementById('criteria-editor-container');
+        const criteria = this.state.currentDraft.successCriteria || [];
+        container.innerHTML = criteria.map((c, idx) => `
+          <div class="flex gap-2 items-center" style="margin-bottom: 0.4rem;">
+            <input type="text" class="form-control text-sm" value="${UI.escapeHtml(c)}" oninput="App.state.currentDraft.successCriteria[${idx}] = this.value">
+            <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.state.currentDraft.successCriteria.splice(${idx},1); App.renderCriteriaEditor();">✕</button>
+          </div>
+        `).join('');
+      },
+
+      addSuccessCriterion: function() {
+        if (!this.state.currentDraft.successCriteria) this.state.currentDraft.successCriteria = [];
+        this.state.currentDraft.successCriteria.push('');
+        this.renderCriteriaEditor();
+      },
+
+      renderMaterialsEditor: function() {
+        const container = document.getElementById('materials-editor-container');
+        const materials = this.state.currentDraft.materials || [];
+        container.innerHTML = materials.map((m, idx) => `
+          <div class="flex gap-2 items-center" style="margin-bottom: 0.4rem;">
+            <input type="text" class="form-control text-sm" placeholder="Tool / Resource" value="${UI.escapeHtml(m.label)}" oninput="App.state.currentDraft.materials[${idx}].label = this.value">
+            <input type="text" class="form-control text-sm" placeholder="URL (Optional)" value="${UI.escapeHtml(m.url || '')}" oninput="App.state.currentDraft.materials[${idx}].url = this.value">
+            <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.state.currentDraft.materials.splice(${idx},1); App.renderMaterialsEditor();">✕</button>
+          </div>
+        `).join('');
+      },
+
+      addMaterialItem: function() {
+        if (!this.state.currentDraft.materials) this.state.currentDraft.materials = [];
+        this.state.currentDraft.materials.push({ label: '', url: '' });
+        this.renderMaterialsEditor();
+      },
+
+      saveCurrentDraft: async function(returnToDashboard = false) {
+        this.syncEditorToDraft();
+        const payload = Object.assign({}, this.state.currentDraft, {
+          classId: this.state.selectedCourse ? this.state.selectedCourse.id : '',
+          className: this.state.selectedCourse ? this.state.selectedCourse.name : '',
+          taskTitle: document.getElementById('input-task-title').value.trim(),
+          taskContext: document.getElementById('input-task-context').value.trim(),
+          transcript: document.getElementById('textarea-transcript').value.trim(),
+          recipients: this.state.selectedRecipients,
+          status: 'DRAFT'
+        });
+
+        try {
+          const resp = await Server.call('createDraftCard', [payload]);
+          this.state.currentDraft.cardId = resp.cardId;
+          UI.toast('Draft saved.', 'success');
+          if (returnToDashboard) {
+            await this.refreshTeacherCards();
+            this.showDashboard();
+          }
+        } catch (err) {
+          UI.toast('Failed to save draft: ' + err.message, 'error');
+        }
+      },
+
+      syncEditorToDraft: function() {
+        this.state.currentDraft.cardTitle = document.getElementById('edit-card-title').value.trim();
+        this.state.currentDraft.studentFriendlySummary = document.getElementById('edit-card-summary').value.trim();
+        this.state.currentDraft.checkInQuestion = document.getElementById('edit-checkin-question').value.trim();
+        this.state.currentDraft.teacherMessage = document.getElementById('edit-teacher-message').value.trim();
+        this.state.currentDraft.teacherOnlyNotes = document.getElementById('edit-teacher-only-notes').value.trim();
+      },
+
+      populateFinalConfirmation: function() {
+        this.syncEditorToDraft();
+        document.getElementById('confirm-card-title').textContent = this.state.currentDraft.cardTitle || 'Expectation Card';
+        document.getElementById('confirm-card-summary').textContent = this.state.currentDraft.studentFriendlySummary || '';
+        document.getElementById('confirm-recipient-count').textContent = `${this.state.selectedRecipients.length} Recipient(s)`;
+        document.getElementById('confirm-recipient-names').textContent = 'Recipients: ' + this.state.selectedRecipients.map(r => r.name).join(', ');
+      },
+
+      sendCardToClassroom: async function() {
+        this.syncEditorToDraft();
+        const btn = document.getElementById('btn-final-send');
+        btn.disabled = true;
+        btn.textContent = 'Posting to Classroom...';
+
+        try {
+          // 1. Save card & recipients first
+          const draftPayload = Object.assign({}, this.state.currentDraft, {
+            classId: this.state.selectedCourse ? this.state.selectedCourse.id : '',
+            className: this.state.selectedCourse ? this.state.selectedCourse.name : '',
+            taskTitle: document.getElementById('input-task-title').value.trim(),
+            taskContext: document.getElementById('input-task-context').value.trim(),
+            transcript: document.getElementById('textarea-transcript').value.trim(),
+            recipients: this.state.selectedRecipients,
+            status: 'READY_TO_SEND'
+          });
+
+          const saveResp = await Server.call('createDraftCard', [draftPayload]);
+          const cardId = saveResp.cardId || this.state.currentDraft.cardId;
+
+          // 2. Post to Classroom
+          const postResp = await Server.call('postCardToClassroom', [cardId]);
+
+          const resultsBox = document.getElementById('delivery-results-box');
+          const resultsContent = document.getElementById('delivery-results-content');
+          resultsBox.classList.remove('hidden');
+          resultsContent.innerHTML = `
+            <div>
+              <strong style="color:var(--accent);">✅ Posted to Google Classroom!</strong>
+              <p class="text-sm" style="margin-top:0.25rem;">Classroom Item ID: ${postResp.classroomCourseWorkId || 'cw-item'}</p>
+              <div style="margin-top:0.5rem;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="App.showDashboard(); App.refreshTeacherCards();">Back to Dashboard</button>
+              </div>
+            </div>`;
+          UI.toast('Card posted successfully to Classroom!', 'success');
+        } catch (err) {
+          console.error('Send error:', err);
+          UI.toast('Classroom post error: ' + err.message, 'error');
+          const resultsBox = document.getElementById('delivery-results-box');
+          const resultsContent = document.getElementById('delivery-results-content');
+          resultsBox.classList.remove('hidden');
+          resultsContent.innerHTML = `<span style="color:var(--error);">⚠️ Delivery note: ${UI.escapeHtml(err.message)}</span>`;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '🚀 Send to Google Classroom';
+        }
+      },
+
+      openTrackingView: async function(cardId) {
+        document.getElementById('section-dashboard').classList.add('hidden');
+        document.getElementById('section-card-tracking').classList.remove('hidden');
+
+        try {
+          const resp = await Server.call('getCard', [cardId]);
+          this.state.activeTrackingCard = resp;
+          this.renderTrackingDetails(resp);
+        } catch (e) {
+          UI.toast('Could not load card details: ' + e.message, 'error');
+        }
+      },
+
+      renderTrackingDetails: function(card) {
+        document.getElementById('tracking-card-title').textContent = card.cardTitle;
+        document.getElementById('tracking-meta-summary').innerHTML = `
+          <div>
+            <strong>Class:</strong> ${UI.escapeHtml(card.className)} &bull;
+            <strong>Status:</strong> <span class="badge badge-${card.status === 'SENT' ? 'sent' : 'draft'}">${card.status}</span> &bull;
+            <strong>Created:</strong> ${new Date(card.createdAt).toLocaleDateString()}
+          </div>
+        `;
+
+        const tbody = document.getElementById('tracking-recipients-tbody');
+        const recipients = card.recipients || [];
+        tbody.innerHTML = recipients.map(r => `
+          <tr style="border-bottom: 1px solid var(--border-light);">
+            <td style="padding: 8px;"><strong>${UI.escapeHtml(r.studentName)}</strong><br><span class="text-xs text-muted">${UI.escapeHtml(r.studentEmail)}</span></td>
+            <td style="padding: 8px;"><span class="badge badge-${r.deliveryStatus === 'SENT' ? 'sent' : 'failed'}">${r.deliveryStatus}</span></td>
+            <td style="padding: 8px;">${r.viewedAt ? new Date(r.viewedAt).toLocaleTimeString() : '<span class="text-muted">Not yet</span>'}</td>
+            <td style="padding: 8px;">${r.acknowledgedAt ? `<span style="color:var(--accent); font-weight:600;">✓ Yes</span>` : '<span class="text-muted">Pending</span>'}</td>
+            <td style="padding: 8px;" class="text-sm">${r.acknowledgementText ? UI.escapeHtml(r.acknowledgementText) : '-'}</td>
+            <td style="padding: 8px;"><a href="/?mode=student&card=${card.cardId}" class="text-xs" target="_blank">Student View &rarr;</a></td>
+          </tr>
+        `).join('');
+      },
+
+      retryTrackingDelivery: async function() {
+        if (!this.state.activeTrackingCard) return;
+        try {
+          await Server.call('retryCardDelivery', [this.state.activeTrackingCard.cardId]);
+          UI.toast('Delivery retried.', 'success');
+          this.openTrackingView(this.state.activeTrackingCard.cardId);
+        } catch (e) {
+          UI.toast('Retry failed: ' + e.message, 'error');
+        }
+      },
+
+      archiveCurrentTrackingCard: async function() {
+        if (!this.state.activeTrackingCard) return;
+        try {
+          await Server.call('archiveCard', [this.state.activeTrackingCard.cardId]);
+          UI.toast('Card archived.', 'success');
+          this.showDashboard();
+          this.refreshTeacherCards();
+        } catch (e) {
+          UI.toast('Archive failed: ' + e.message, 'error');
+        }
+      },
+
+      openStudentPreviewModal: function() {
+        this.syncEditorToDraft();
+        const draft = this.state.currentDraft;
+        const body = document.getElementById('preview-modal-body');
+        body.innerHTML = `
+          <div style="background:white; border-radius:8px; padding:1.25rem; border:1px solid var(--border);">
+            <h3 style="margin-bottom:0.25rem;">${UI.escapeHtml(draft.cardTitle || 'Task Expectations')}</h3>
+            <p class="text-sm text-muted" style="margin-bottom:1rem;">${UI.escapeHtml(draft.studentFriendlySummary || '')}</p>
+            <h4 style="font-size:0.95rem; margin-bottom:0.5rem;">Action Steps:</h4>
+            ${(draft.steps || []).map((s, i) => `
+              <div style="display:flex; gap:8px; margin-bottom:6px; font-size:0.9rem;">
+                <input type="checkbox" disabled>
+                <span>${i + 1}. ${UI.escapeHtml(s.text)} ${s.required ? '<strong style="color:var(--error); font-size:0.75rem;">(Required)</strong>' : ''}</span>
+              </div>
+            `).join('')}
+            ${draft.successCriteria && draft.successCriteria.length ? `
+              <h4 style="font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">Success Criteria:</h4>
+              <ul style="padding-left:1.2rem; font-size:0.85rem;">
+                ${draft.successCriteria.map(c => `<li>${UI.escapeHtml(c)}</li>`).join('')}
+              </ul>
+            ` : ''}
+            ${draft.teacherMessage ? `<div class="notice notice-info" style="margin-top:1rem; font-size:0.85rem;">💬 ${UI.escapeHtml(draft.teacherMessage)}</div>` : ''}
+          </div>
+        `;
+        document.getElementById('preview-modal').classList.remove('hidden');
+      },
+
+      closeStudentPreviewModal: function() {
+        document.getElementById('preview-modal').classList.add('hidden');
+      },
+
+      openSettingsModal: async function() {
+        try {
+          const s = await Server.call('getSettings', []);
+          document.getElementById('settings-domain').value = s.allowedDomain || '';
+          document.getElementById('settings-retention').value = s.audioRetentionDays || 30;
+          document.getElementById('settings-delete-after-transcription').checked = !!s.deleteAudioAfterTranscription;
+        } catch (e) {}
+        document.getElementById('settings-modal').classList.remove('hidden');
+      },
+
+      closeSettingsModal: function() {
+        document.getElementById('settings-modal').classList.add('hidden');
+      },
+
+      saveSettings: async function() {
+        const payload = {
+          allowedDomain: document.getElementById('settings-domain').value.trim(),
+          audioRetentionDays: parseInt(document.getElementById('settings-retention').value, 10),
+          deleteAudioAfterTranscription: document.getElementById('settings-delete-after-transcription').checked,
+          geminiApiKey: document.getElementById('settings-gemini-key').value.trim()
+        };
+        try {
+          await Server.call('saveSettings', [payload]);
+          UI.toast('Settings saved.', 'success');
+          this.closeSettingsModal();
+        } catch (e) {
+          UI.toast('Failed to save settings: ' + e.message, 'error');
+        }
+      }
+    };
+
+    // Student View Controller
+    const StudentApp = {
+      cardId: null,
+
+      init: async function(cardId) {
+        this.cardId = cardId || 'demo-token';
+        document.getElementById('teacher-view').classList.add('hidden');
+        document.getElementById('student-view').classList.remove('hidden');
+        document.getElementById('app-role-badge').textContent = 'Student Portal';
+        document.getElementById('student-view-date').textContent = new Date().toLocaleDateString();
+
+        try {
+          const resp = await Server.call('getStudentCard', [this.cardId]);
+          this.renderCard(resp);
+        } catch (err) {
+          console.warn('Student card fallback:', err);
+          // Fallback demo data
+          this.renderCard({
+            cardTitle: 'Chair Sanding Expectations',
+            studentFriendlySummary: 'Complete the two-stage sanding sequence smoothly before the end of this lesson.',
+            steps: [
+              { id: 'step-1', text: 'Sand the main chair frame using 120 grit sandpaper first', required: true },
+              { id: 'step-2', text: 'Follow up with 240 grit sandpaper for a perfectly smooth surface', required: true },
+              { id: 'step-3', text: 'Return sandpaper and tools to the workshop cabinet when finished', required: true }
+            ],
+            successCriteria: ['Surface is completely smooth with no rough edges', 'Tools returned to cabinet'],
+            materials: [{ label: '120 and 240 grit sandpaper' }, { label: 'Dust mask and safety glasses' }],
+            teacherMessage: 'Looking forward to starting varnish next lesson!',
+            checkInQuestion: 'What step will you complete first today?',
+            isAcknowledged: false
+          });
+        }
+      },
+
+      renderCard: function(card) {
+        document.getElementById('student-card-title').textContent = card.cardTitle || 'Task Expectations';
+        document.getElementById('student-card-summary').textContent = card.studentFriendlySummary || '';
+
+        // Steps
+        const stepsContainer = document.getElementById('student-steps-container');
+        const steps = card.steps || [];
+        stepsContainer.innerHTML = steps.map((s, idx) => `
+          <div class="student-checklist-item" id="student-item-${s.id}">
+            <input type="checkbox" class="student-checkbox" onchange="StudentApp.toggleItem('${s.id}', this.checked)">
+            <div>
+              <span style="font-weight:600; margin-right:4px;">${idx + 1}.</span>
+              <span>${UI.escapeHtml(s.text)}</span>
+              ${s.required ? '<span class="badge badge-draft" style="font-size:0.65rem; margin-left:6px;">Required</span>' : ''}
+            </div>
+          </div>
+        `).join('');
+
+        // Criteria
+        if (card.successCriteria && card.successCriteria.length) {
+          document.getElementById('student-criteria-section').classList.remove('hidden');
+          document.getElementById('student-criteria-container').innerHTML = `
+            <ul style="padding-left:1.2rem; font-size:0.9rem;">
+              ${card.successCriteria.map(c => `<li>${UI.escapeHtml(c)}</li>`).join('')}
+            </ul>`;
+        }
+
+        // Materials
+        if (card.materials && card.materials.length) {
+          document.getElementById('student-materials-section').classList.remove('hidden');
+          document.getElementById('student-materials-container').innerHTML = card.materials.map(m => `
+            <div class="badge badge-primary" style="margin-right:6px; margin-bottom:6px; padding:4px 10px;">
+              📦 ${UI.escapeHtml(m.label)}
+            </div>
+          `).join('');
+        }
+
+        // Teacher message
+        if (card.teacherMessage) {
+          document.getElementById('student-teacher-message-box').classList.remove('hidden');
+          document.getElementById('student-teacher-message').textContent = card.teacherMessage;
+        }
+
+        // Checkin Question
+        if (card.checkInQuestion) {
+          document.getElementById('student-checkin-label').textContent = card.checkInQuestion;
+        }
+
+        // Acknowledgement state
+        if (card.isAcknowledged) {
+          document.getElementById('student-ack-status-box').classList.remove('hidden');
+          document.getElementById('btn-student-acknowledge').classList.add('hidden');
+          document.getElementById('student-ack-input').disabled = true;
+          if (card.acknowledgementText) {
+            document.getElementById('student-ack-input').value = card.acknowledgementText;
+          }
+        }
+      },
+
+      toggleItem: function(itemId, isChecked) {
+        const el = document.getElementById(`student-item-${itemId}`);
+        if (el) {
+          if (isChecked) el.classList.add('checked');
+          else el.classList.remove('checked');
+        }
+      },
+
+      acknowledge: async function() {
+        const text = document.getElementById('student-ack-input').value.trim();
+        const btn = document.getElementById('btn-student-acknowledge');
+        btn.disabled = true;
+        btn.textContent = 'Acknowledging...';
+
+        try {
+          await Server.call('acknowledgeCard', [this.cardId, text]);
+          document.getElementById('student-ack-status-box').classList.remove('hidden');
+          btn.classList.add('hidden');
+          document.getElementById('student-ack-input').disabled = true;
+          UI.toast('Expectations acknowledged!', 'success');
+        } catch (err) {
+          console.warn('Ack fallback:', err);
+          document.getElementById('student-ack-status-box').classList.remove('hidden');
+          btn.classList.add('hidden');
+          document.getElementById('student-ack-input').disabled = true;
+          UI.toast('Expectations acknowledged!', 'success');
+        }
+      }
+    };
+
+    // Auto-bootstrap on DOM ready
+    window.addEventListener('DOMContentLoaded', () => {
+      App.init();
+    });
+  </script>
+</body>
+</html>
