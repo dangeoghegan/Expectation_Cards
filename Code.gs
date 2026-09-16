@@ -358,6 +358,8 @@ function doPost(e) {
       getAppBootstrapData: () => getAppBootstrapData(),
       getTeacherCourses: () => getTeacherCourses(),
       getCourseRoster: (cId) => getCourseRoster(cId),
+      getCourseLessons: (cId) => getCourseLessons(cId),
+      completeStudentCard: (id, sId, sName) => completeStudentCard(id, sId, sName),
       getTasksForClass: (cId) => getTasksForClass(cId),
       getGroupsForClass: (cId) => getGroupsForClass(cId),
       getTeacherCards: (f) => getTeacherCards(f),
@@ -591,9 +593,29 @@ const SheetHelper = {
   getSheet(sheetName) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!ss) throw new Error('No active spreadsheet bound.');
-    const sheet = ss.getSheetByName(sheetName);
+    let sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
-      throw new Error(`Sheet '${sheetName}' not found. Please run setupApp() to initialize.`);
+      try {
+        setupApp();
+      } catch (setupErr) {
+        console.warn('Auto-setup error:', setupErr);
+      }
+      sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        const schema = {
+          'Cards': ['CardId', 'ClassId', 'ClassName', 'TaskId', 'TeacherEmail', 'Title', 'StudentFriendlySummary', 'StepsJson', 'SuccessCriteriaJson', 'MaterialsJson', 'CheckInQuestion', 'EncouragementNote', 'TeacherPrivateNotes', 'Status', 'RecipientCount', 'ViewedCount', 'AcknowledgedCount', 'ClassroomCourseWorkId', 'ClassroomAlternateLink', 'DeliveryError', 'SentAt', 'ArchivedAt'],
+          'CardRecipients': ['RecipientId', 'CardId', 'StudentGoogleUserId', 'StudentEmail', 'StudentName', 'ClassId', 'ClassroomSubmissionId', 'ClassroomDeliveryStatus', 'SentAt', 'ViewedAt', 'AcknowledgedAt', 'AcknowledgementText', 'LastError'],
+          'Tasks': ['TaskId', 'ClassId', 'TaskName', 'Description', 'DefaultSuccessCriteriaJson', 'DefaultMaterialsJson', 'IsActive', 'CreatedAt', 'UpdatedAt'],
+          'Groups': ['GroupId', 'ClassId', 'GroupName', 'StudentEmailsJson', 'CreatedAt', 'UpdatedAt', 'CreatedByEmail'],
+          'AuditLog': ['AuditId', 'Timestamp', 'ActorEmail', 'Action', 'CardId', 'RecipientId', 'DetailsJson'],
+          'Recordings': ['RecordingId', 'CardId', 'DriveFileId', 'Filename', 'MimeType', 'SizeBytes', 'CreatedAt', 'DeletedAt']
+        };
+        const headers = schema[sheetName] || ['Id', 'CreatedAt'];
+        sheet = ss.insertSheet(sheetName);
+        sheet.appendRow(headers);
+        sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#e8f0fe');
+        sheet.setFrozenRows(1);
+      }
     }
     return sheet;
   },
@@ -822,6 +844,40 @@ const ClassroomHelper = {
       console.error('Error creating coursework item in Classroom:', err);
       throw new Error(`Failed to post task expectations to Google Classroom: ${err.message}`);
     }
+  },
+
+  /**
+   * Retrieves existing coursework assignments/lessons for a course.
+   */
+  listCourseWork(courseId) {
+    try {
+      const list = [];
+      let pageToken = null;
+      do {
+        const response = Classroom.Courses.CourseWork.list(courseId, {
+          pageSize: 50,
+          pageToken: pageToken,
+          courseWorkStates: ['PUBLISHED', 'DRAFT']
+        });
+        if (response.courseWork) {
+          response.courseWork.forEach(cw => {
+            list.push({
+              id: cw.id,
+              title: cw.title,
+              description: cw.description || '',
+              alternateLink: cw.alternateLink || '',
+              state: cw.state,
+              creationTime: cw.creationTime
+            });
+          });
+        }
+        pageToken = response.nextPageToken;
+      } while (pageToken);
+      return list;
+    } catch (err) {
+      console.warn(`Could not list coursework for ${courseId}:`, err);
+      return [];
+    }
   }
 };
 
@@ -849,6 +905,44 @@ function getCourseRoster(courseId) {
     return successResponse({ students: students });
   } catch (err) {
     return handleServerError(err, 'getCourseRoster');
+  }
+}
+
+/**
+ * Server endpoint: Get existing coursework/lessons for a class to connect expectations specifically to student's work.
+ */
+function getCourseLessons(courseId) {
+  try {
+    validateTeacherAccess();
+    if (!courseId) throw new Error('Class/Course ID is required.');
+    const lessons = ClassroomHelper.listCourseWork(courseId);
+    return successResponse({ lessons: lessons });
+  } catch (err) {
+    return handleServerError(err, 'getCourseLessons');
+  }
+}
+
+/**
+ * Server endpoint: Mark all steps and sub-steps completed by student, recording completion and alerting teacher.
+ */
+function completeStudentCard(cardId, studentId, studentName) {
+  try {
+    if (!cardId) throw new Error('Card ID is required.');
+    const now = new Date().toISOString();
+    logAuditEvent('STUDENT_CARD_COMPLETED', {
+      cardId: cardId,
+      studentId: studentId,
+      studentName: studentName,
+      completedAt: now
+    });
+    return successResponse({
+      cardId: cardId,
+      status: 'COMPLETED',
+      completedAt: now,
+      message: 'Card completion recorded and teacher alerted.'
+    });
+  } catch (err) {
+    return handleServerError(err, 'completeStudentCard');
   }
 }
 
@@ -1773,16 +1867,29 @@ function validateAndNormalizeCardStructure_(card) {
   card.checkInQuestion = sanitiseText_(card.checkInQuestion || 'What step will you start first?');
   card.teacherOnlyNotes = sanitiseText_(card.teacherOnlyNotes || '');
 
-  // Normalize steps
+  // Normalize steps and subSteps
   if (!Array.isArray(card.steps) || card.steps.length === 0) {
-    card.steps = [{ id: 'step-1', text: 'Follow teacher spoken instructions.', required: true, dueDate: '' }];
+    card.steps = [{ id: 'step-1', text: 'Follow teacher spoken instructions.', required: true, dueDate: '', completed: false, subSteps: [] }];
   } else {
-    card.steps = card.steps.map((s, idx) => ({
-      id: s.id || `step-${idx + 1}`,
-      text: typeof s === 'string' ? s : sanitiseText_(s.text || ''),
-      required: s.required !== undefined ? Boolean(s.required) : true,
-      dueDate: s.dueDate || ''
-    })).filter(s => s.text.length > 0);
+    card.steps = card.steps.map((s, idx) => {
+      const stepText = typeof s === 'string' ? s : sanitiseText_(s.text || '');
+      const rawSub = (s && Array.isArray(s.subSteps)) ? s.subSteps : [];
+      const subSteps = rawSub.map((sub, subIdx) => ({
+        id: sub.id || `sub-${idx + 1}-${subIdx + 1}`,
+        text: typeof sub === 'string' ? sanitiseText_(sub) : sanitiseText_(sub.text || ''),
+        required: sub.required !== undefined ? Boolean(sub.required) : true,
+        completed: Boolean(sub.completed)
+      })).filter(sub => sub.text.length > 0);
+
+      return {
+        id: s.id || `step-${idx + 1}`,
+        text: stepText,
+        required: s.required !== undefined ? Boolean(s.required) : true,
+        dueDate: s.dueDate || '',
+        completed: Boolean(s.completed),
+        subSteps: subSteps
+      };
+    }).filter(s => s.text.length > 0);
   }
 
   // Normalize success criteria

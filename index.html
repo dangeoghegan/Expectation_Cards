@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Task Expectations</title>
+  <title>Expectation Cards</title>
+  <meta name="description" content="Mobile-first web application for high-school teachers to record spoken expectations, use Gemini to generate structured checklists, and deliver to students.">
+  <meta property="og:title" content="Expectation Cards">
+  <meta property="og:description" content="Mobile-first web application for high-school teachers to record spoken expectations, use Gemini to generate structured checklists, and deliver to students.">
   <base target="_top">
   <!-- ==========================================================================
        GOOGLE APPS SCRIPT (GAS) LIVE WEB APP URL
@@ -572,6 +575,145 @@
       accent-color: var(--accent);
     }
 
+    /* Info Icons (ⓘ) & De-clutter Popovers */
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      line-height: 1;
+      transition: var(--transition);
+      vertical-align: middle;
+      user-select: none;
+    }
+    .info-btn:hover {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      transform: scale(1.1);
+    }
+    .info-popover {
+      background: #f8fafc;
+      border: 1px solid #94a3b8;
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #1e293b;
+      margin-bottom: 0.85rem;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      animation: infoFadeIn 0.2s ease-in-out;
+    }
+    @keyframes infoFadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Sub-step Editor in Studio */
+    .substep-edit-row {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 6px;
+      padding: 0.45rem 0.65rem;
+      margin-top: 0.4rem;
+      margin-left: 1.8rem;
+    }
+
+    /* Student View Step & Sub-Step Hierarchy */
+    .student-step-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.75rem;
+      border-left: 4px solid transparent;
+      transition: var(--transition);
+      overflow: hidden;
+    }
+    .student-step-card.checked {
+      background: #f0fdf4;
+      border-color: #86efac;
+      border-left-color: var(--accent);
+    }
+    .student-step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1rem;
+      gap: 0.75rem;
+    }
+    .student-reveal-btn {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      color: #334155;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .student-reveal-btn:hover {
+      background: #f1f5f9;
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .student-substeps-container {
+      background: #ffffff;
+      border-top: 1px solid #e2e8f0;
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .student-substep-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      font-size: 0.88rem;
+      color: #334155;
+      padding: 0.3rem 0;
+      cursor: pointer;
+    }
+    .student-substep-row.checked {
+      text-decoration: line-through;
+      color: #64748b;
+    }
+    .student-substep-checkbox {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    /* Teacher Alert Banner */
+    .teacher-alert-banner {
+      background: #ecfdf5;
+      border: 1px solid #6ee7b7;
+      color: #065f46;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      box-shadow: var(--shadow-sm);
+    }
+
     /* Responsive */
     @media (max-width: 640px) {
       .app-header { padding: 0.6rem 0.85rem; }
@@ -646,6 +788,9 @@
             </button>
           </div>
         </div>
+
+        <!-- Persistent Student Completion Alerts Container -->
+        <div id="teacher-completion-alerts" class="hidden" style="margin-bottom: 1rem;"></div>
 
         <!-- Dashboard Filter Tabs & Search -->
         <div class="card" style="padding: 0.85rem 1rem;">
@@ -739,16 +884,32 @@
               <div class="flex justify-between items-center flex-wrap gap-2" style="margin-bottom: 0.75rem;">
                 <div class="flex items-center gap-2">
                   <span class="section-badge">1</span>
-                  <h3 style="margin: 0; font-size: 1.05rem;">Google Classroom Class & Recipients</h3>
+                  <h3 style="margin: 0; font-size: 1.05rem;">Class & Recipients</h3>
+                  <button type="button" class="info-btn" onclick="App.toggleInfo('info-class')" title="View instructions">ⓘ</button>
                 </div>
                 <div class="flex gap-2">
                   <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.loadCourses(true)">🔄 Reload Classes</button>
-                  <button type="button" class="btn btn-secondary btn-sm text-xs" id="btn-quick-test-classroom" onclick="App.runQuickClassroomTest()">⚡ Quick Test Post</button>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" id="btn-quick-test-classroom" onclick="App.runQuickClassroomTest()">⚡ Quick Test</button>
+                </div>
+              </div>
+
+              <!-- Information Popover (Toggled via ⓘ button) -->
+              <div id="info-class" class="info-popover hidden">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <strong>💡 Google Classroom & Recipient Instructions:</strong>
+                    <ul style="margin: 0.35rem 0 0 1.2rem; padding: 0;">
+                      <li><strong>Select Course:</strong> Connects to your Google Classroom courses and automatically syncs existing coursework and student rosters.</li>
+                      <li><strong>Whole Class / Test Mode:</strong> Posts directly to all students or dummy classes without needing individual accounts.</li>
+                      <li><strong>Pick Specific Students:</strong> Tailors expectation cards directly to individual students (e.g. Jimmy Chen) for differentiated pacing.</li>
+                    </ul>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.toggleInfo('info-class')">✕</button>
                 </div>
               </div>
 
               <!-- Live Google Classroom API Status Banner -->
-              <div id="classroom-connection-notice" class="notice notice-info" style="margin-bottom: 0.75rem; padding: 0.6rem 0.85rem;">
+              <div id="classroom-connection-notice" class="notice notice-info" style="margin-bottom: 0.75rem; padding: 0.5rem 0.75rem;">
                 <div class="flex justify-between items-center flex-wrap gap-2">
                   <div class="text-xs">
                     <strong>Classroom API:</strong>
@@ -769,7 +930,7 @@
               </div>
 
               <!-- Course Meta Notice -->
-              <div id="course-meta-box" class="notice notice-info hidden" style="margin-bottom: 0.75rem; padding: 0.6rem 0.85rem;">
+              <div id="course-meta-box" class="notice notice-info hidden" style="margin-bottom: 0.75rem; padding: 0.5rem 0.75rem;">
                 <span id="course-meta-text">Class roster and coursework will be retrieved for this course.</span>
               </div>
 
@@ -783,14 +944,6 @@
                   <button type="button" class="btn btn-secondary btn-sm" id="btn-select-students-mode" onclick="App.switchToStudentList()">
                     👥 Pick Specific Students
                   </button>
-                </div>
-
-                <!-- Test Mode Notification Banner -->
-                <div id="test-mode-recipient-banner" class="notice notice-info" style="margin-bottom: 0.75rem; padding: 0.6rem 0.85rem;">
-                  <div class="text-xs">
-                    <strong>🧪 Whole Class Delivery Active:</strong>
-                    <span>Coursework will be created in Google Classroom for all students. Ideal for testing dummy classes without enrolled student accounts!</span>
-                  </div>
                 </div>
 
                 <!-- Individual Student Roster Container (collapsible) -->
@@ -820,15 +973,48 @@
 
             <!-- 2. Task & Learning Context Card -->
             <div id="section-studio-task" class="card studio-card">
-              <div class="flex items-center gap-2" style="margin-bottom: 0.75rem;">
-                <span class="section-badge">2</span>
-                <h3 style="margin: 0; font-size: 1.05rem;">Task & Learning Context</h3>
+              <div class="flex justify-between items-center flex-wrap gap-2" style="margin-bottom: 0.75rem;">
+                <div class="flex items-center gap-2">
+                  <span class="section-badge">2</span>
+                  <h3 style="margin: 0; font-size: 1.05rem;">Task & Learning Context</h3>
+                  <button type="button" class="info-btn" onclick="App.toggleInfo('info-task')" title="View instructions">ⓘ</button>
+                </div>
               </div>
 
+              <!-- Information Popover (Toggled via ⓘ button) -->
+              <div id="info-task" class="info-popover hidden">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <strong>💡 Task & Learning Context Instructions:</strong>
+                    <ul style="margin: 0.35rem 0 0 1.2rem; padding: 0;">
+                      <li><strong>Existing Lessons:</strong> Pulls real coursework and lessons directly from Google Classroom to attach expectations directly to student assignments.</li>
+                      <li><strong>Individual Student Targeting:</strong> When individual students are selected in Section 1, expectation cards are tailored specifically to that student's work.</li>
+                      <li><strong>Live Synchronization:</strong> Changing the task title or context instantly updates the expectation card in real-time.</li>
+                    </ul>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.toggleInfo('info-task')">✕</button>
+                </div>
+              </div>
+
+              <!-- Student Targeting Notice (Dynamic) -->
+              <div id="student-targeting-box" class="notice notice-info hidden" style="margin-bottom: 0.75rem; padding: 0.5rem 0.75rem;">
+                <span id="student-targeting-text">🎯 <strong>Targeted Student Work:</strong> Customizing expectations specifically for selected student.</span>
+              </div>
+
+              <!-- Existing Coursework / Lessons Dropdown -->
               <div class="form-group" style="margin-bottom: 0.75rem;">
-                <label class="form-label" for="task-template-select">Quick Task Template <span class="form-label-hint">(Auto-fills all fields)</span></label>
+                <label class="form-label" for="select-existing-lesson">Existing Classroom Lesson / Coursework <span class="form-label-hint">(Selects class lessons)</span></label>
+                <select id="select-existing-lesson" class="form-control" onchange="App.onExistingLessonSelected(this.value)">
+                  <option value="">-- Choose an existing lesson or enter manually below --</option>
+                  <option value="create_new">+ Create New Standalone Task</option>
+                </select>
+              </div>
+
+              <!-- Quick Task Template (Optional) -->
+              <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label class="form-label" for="task-template-select">Quick Subject Template <span class="form-label-hint">(Auto-fills all fields)</span></label>
                 <select id="task-template-select" class="form-control" onchange="App.onTaskTemplateSelected(this.value)">
-                  <option value="">-- Choose existing template or enter manually --</option>
+                  <option value="">-- Choose starter template or enter manually --</option>
                   <option value="timber-sanding">🪵 Timber Workshop: Chair Sanding & Safety</option>
                   <option value="essay-intro">✍️ English: Persuasive Essay Introduction Draft</option>
                   <option value="science-lab">🔬 Science: Acid-Base Titration & Lab Safety</option>
@@ -844,7 +1030,7 @@
 
               <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" for="input-task-context">Specific Learning Context / Instructions</label>
-                <textarea id="input-task-context" class="form-control" style="min-height: 70px;" placeholder="Context provided to student, e.g. Lesson 4 workshop stage, dry fit and safety checks." oninput="App.onTaskContextInput(this.value)"></textarea>
+                <textarea id="input-task-context" class="form-control" style="min-height: 65px;" placeholder="Context provided to student, e.g. Lesson 4 workshop stage, dry fit and safety checks." oninput="App.onTaskContextInput(this.value)"></textarea>
               </div>
             </div>
 
@@ -854,10 +1040,32 @@
                 <div class="flex items-center gap-2">
                   <span class="section-badge">3</span>
                   <h3 style="margin: 0; font-size: 1.05rem;">Spoken Conversation & Voice Input</h3>
+                  <button type="button" class="info-btn" onclick="App.toggleInfo('info-audio')" title="View instructions">ⓘ</button>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="AudioRecorder.loadSampleAudio()">
-                  ⚡ Load Sample Voice Audio
-                </button>
+                <div class="flex gap-2 flex-wrap items-center">
+                  <label class="btn btn-secondary btn-sm text-xs" style="cursor: pointer; margin: 0;">
+                    📁 Upload Audio
+                    <input type="file" accept="audio/*" style="display: none;" onchange="AudioRecorder.handleFileInput(this.files[0])">
+                  </label>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="AudioRecorder.loadSampleAudio()">
+                    ⚡ Load Sample Voice
+                  </button>
+                </div>
+              </div>
+
+              <!-- Information Popover (Toggled via ⓘ button) -->
+              <div id="info-audio" class="info-popover hidden">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <strong>💡 Voice Recording & Input Instructions:</strong>
+                    <ul style="margin: 0.35rem 0 0 1.2rem; padding: 0;">
+                      <li><strong>Live Recording:</strong> Click the microphone to capture teacher-student dialogue.</li>
+                      <li><strong>Microphone Permissions / Sandbox:</strong> If your browser limits microphone access in an iframe, use <em>📁 Upload Audio</em> or open the studio in a full window.</li>
+                      <li><strong>Direct Editing:</strong> You can edit or type spoken instructions directly into the transcript box below at any time.</li>
+                    </ul>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.toggleInfo('info-audio')">✕</button>
+                </div>
               </div>
 
               <!-- Audio Recording Box -->
@@ -876,6 +1084,24 @@
                 <div id="record-active-controls" class="flex gap-2 hidden" style="margin-top: 0.5rem;">
                   <button type="button" class="btn btn-secondary btn-sm" onclick="AudioRecorder.cancel()">Cancel</button>
                   <button type="button" class="btn btn-primary btn-sm" onclick="AudioRecorder.stop()">Done Recording</button>
+                </div>
+
+                <!-- Microphone Iframe / Permission Fallback Notice -->
+                <div id="mic-fallback-notice" class="hidden notice notice-warning" style="margin-top: 0.5rem; text-align: left; padding: 0.6rem 0.85rem; width: 100%; max-width: 440px;">
+                  <div>
+                    <strong>⚠️ Microphone restricted by browser iframe policy.</strong>
+                    <div class="text-xs" style="margin-top: 0.25rem; line-height: 1.4;">
+                      You can open in a full window to enable your microphone, upload an audio recording file, or type into the transcript box directly.
+                    </div>
+                    <div class="flex gap-2 flex-wrap" style="margin-top: 0.5rem;">
+                      <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="window.open(window.location.href, '_blank')">↗️ Open in Full Window</button>
+                      <label class="btn btn-secondary btn-sm text-xs" style="cursor: pointer; margin: 0;">
+                        📁 Choose Audio File
+                        <input type="file" accept="audio/*" style="display: none;" onchange="AudioRecorder.handleFileInput(this.files[0])">
+                      </label>
+                      <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="AudioRecorder.loadSampleAudio()">⚡ Load Sample Audio</button>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Audio Playback Container -->
@@ -941,13 +1167,32 @@
                 <div class="flex items-center gap-2">
                   <span class="section-badge" style="background: var(--accent);">4</span>
                   <div>
-                    <h3 style="margin: 0; font-size: 1.05rem;">Expectation Card Studio</h3>
-                    <div class="text-xs text-muted">Updates in real-time as you type, speak, or select templates</div>
+                    <div class="flex items-center gap-2">
+                      <h3 style="margin: 0; font-size: 1.05rem;">Expectation Card Studio</h3>
+                      <button type="button" class="info-btn" onclick="App.toggleInfo('info-card')" title="View instructions">ⓘ</button>
+                    </div>
+                    <div class="text-xs text-muted">Steps, sub-steps, and criteria automatically update in real time</div>
                   </div>
                 </div>
-                <div class="flex gap-1">
+                <div class="flex gap-1 flex-wrap">
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.loadSampleDemoCard()" title="Load full sample expectation card">⚡ Sample Demo</button>
                   <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.openStudentPreviewModal()">👁️ Full Preview</button>
-                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.createManualCard()">Reset Card</button>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.createManualCard()">Reset</button>
+                </div>
+              </div>
+
+              <!-- Information Popover (Toggled via ⓘ button) -->
+              <div id="info-card" class="info-popover hidden">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <strong>💡 Expectation Card Studio Instructions:</strong>
+                    <ul style="margin: 0.35rem 0 0 1.2rem; padding: 0;">
+                      <li><strong>Steps & Sub-steps:</strong> Each step states the overarching goal. Click <em>+ Sub-step</em> to define specific sub-actions for students.</li>
+                      <li><strong>Student Checklist Logic:</strong> In the student view, sub-steps are hidden by default. Students click the arrow down to reveal sub-steps, and must check all sub-steps to mark the parent step completed.</li>
+                      <li><strong>Celebration & Alerts:</strong> When all steps are marked done, celebratory confetti sprays and an instant alert is sent to your teacher dashboard!</li>
+                    </ul>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.toggleInfo('info-card')">✕</button>
                 </div>
               </div>
 
@@ -962,16 +1207,16 @@
                 <textarea id="edit-card-summary" class="form-control" style="min-height: 55px;" placeholder="Clear 1-2 sentence summary of what the student needs to accomplish." oninput="App.onCardFieldChange()"></textarea>
               </div>
 
-              <!-- Checklist Steps (Actionable Goals) -->
+              <!-- Checklist Steps (Actionable Goals & Sub-steps) -->
               <div class="form-group" style="margin-bottom: 0.85rem;">
                 <div class="flex justify-between items-center" style="margin-bottom: 0.4rem;">
                   <label class="form-label" style="margin-bottom: 0;">
-                    Checklist Steps (Actionable Goals) *
+                    Checklist Steps & Sub-Steps *
                   </label>
                   <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.addChecklistStep()">+ Add Step</button>
                 </div>
                 <div id="steps-editor-container">
-                  <!-- Dynamically populated steps -->
+                  <!-- Dynamically populated steps and sub-steps -->
                 </div>
               </div>
 
@@ -1019,9 +1264,26 @@
 
             <!-- 5. Google Classroom Delivery Card -->
             <div id="section-studio-send" class="card studio-card" style="background: #f8fafc; border: 2px solid #cbd5e1;">
-              <div class="flex items-center gap-2" style="margin-bottom: 0.75rem;">
-                <span class="section-badge" style="background: #0f172a;">5</span>
-                <h3 style="margin: 0; font-size: 1.05rem;">Deliver to Google Classroom</h3>
+              <div class="flex justify-between items-center flex-wrap gap-2" style="margin-bottom: 0.75rem;">
+                <div class="flex items-center gap-2">
+                  <span class="section-badge" style="background: #0f172a;">5</span>
+                  <h3 style="margin: 0; font-size: 1.05rem;">Deliver to Google Classroom</h3>
+                  <button type="button" class="info-btn" onclick="App.toggleInfo('info-send')" title="View instructions">ⓘ</button>
+                </div>
+              </div>
+
+              <!-- Information Popover (Toggled via ⓘ button) -->
+              <div id="info-send" class="info-popover hidden">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <strong>💡 Google Classroom Delivery Instructions:</strong>
+                    <ul style="margin: 0.35rem 0 0 1.2rem; padding: 0;">
+                      <li><strong>Direct Coursework Post:</strong> Creates an assignment in Google Classroom with links to the interactive student portal.</li>
+                      <li><strong>Live Tracking:</strong> Student completions and acknowledgements automatically report back to your teacher dashboard.</li>
+                    </ul>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.toggleInfo('info-send')">✕</button>
+                </div>
               </div>
 
               <!-- Live Delivery Target Card -->
@@ -1120,6 +1382,19 @@
             <p id="student-card-summary" class="text-muted" style="font-size: 1rem;"></p>
           </div>
 
+          <!-- Student Completion Celebration Banner -->
+          <div id="student-completion-banner" class="hidden notice" style="background: #ecfdf5; border-left: 4px solid #10b981; color: #065f46; padding: 1rem 1.25rem; margin-bottom: 1.25rem; border-radius: var(--radius-sm); box-shadow: var(--shadow-sm);">
+            <div class="flex items-center gap-3">
+              <span style="font-size: 1.8rem; line-height: 1;">🎉</span>
+              <div>
+                <strong style="font-size: 1rem; color: #064e3b; display: block;">All Steps & Sub-Steps Completed!</strong>
+                <p style="margin: 0.2rem 0 0 0; font-size: 0.88rem; line-height: 1.4; color: #047857;">
+                  Outstanding craftsmanship! Your teacher has been automatically alerted that you have finished your expectation card.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Student Tasks Checklist -->
           <h3 style="margin-bottom: 0.75rem;">Your Action Steps</h3>
           <div id="student-steps-container">
@@ -1161,7 +1436,7 @@
         </div>
       </div>
     </div>
-
+    <canvas id="completion-confetti-canvas" class="hidden" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:99999;"></canvas>
   </main>
 
   <!-- Live Student Preview Modal for Teacher -->
@@ -1470,6 +1745,52 @@
           this.saveDb(db);
           return Promise.resolve({ cardId: cardId, message: 'Card archived.' });
         }
+        if (funcName === 'getCourseLessons') {
+          const courseId = args[0];
+          const defaultLessons = [
+            {
+              id: 'lesson-101',
+              title: 'Workshop Session 4: Timber Chair Sanding & Finishing',
+              description: 'Focus on 120 and 240 grit progressive sanding across frame joints before applying clear oil stain.',
+              materials: '120 & 240 grit paper, tack cloths, safety glasses'
+            },
+            {
+              id: 'lesson-102',
+              title: 'Workshop Session 5: Frame Assembly & Glue-Up Clamp Check',
+              description: 'Dry-fit all mortise and tenon joints, verify square with try-square, and clamp evenly.',
+              materials: 'Sash clamps, PVA wood glue, try-square'
+            },
+            {
+              id: 'lesson-103',
+              title: 'Workshop Session 6: Final Clear Coat & Hardware Install',
+              description: 'Apply uniform polyurethane or Danish oil with lint-free cloth and inspect surface sheen.',
+              materials: 'Danish oil, microfibre cloth, nitrile gloves'
+            }
+          ];
+          return Promise.resolve({ lessons: defaultLessons });
+        }
+        if (funcName === 'completeStudentCard') {
+          const cardId = args[0];
+          const studentName = args[1] || 'Jimmy Chen';
+          const reflection = args[2] || '';
+          const card = db.cards.find(x => x.cardId === cardId);
+          if (card) {
+            if (!card.completedStudents) card.completedStudents = [];
+            card.completedStudents.push({
+              studentName: studentName,
+              completedAt: new Date().toISOString(),
+              reflection: reflection
+            });
+            this.saveDb(db);
+          }
+          return Promise.resolve({
+            ok: true,
+            cardId: cardId,
+            studentName: studentName,
+            completedAt: new Date().toISOString(),
+            message: `Teacher alerted! ${studentName} completed all expectation steps.`
+          });
+        }
         if (funcName === 'duplicateCard') {
           const cardId = args[0];
           const c = db.cards.find(x => x.cardId === cardId);
@@ -1580,6 +1901,9 @@
 
       start: async function() {
         try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('MediaDevices API not supported or restricted in iframe.');
+          }
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           this.mediaRecorder = new MediaRecorder(stream);
           this.audioChunks = [];
@@ -1612,15 +1936,38 @@
             this.updateTimerDisplay();
           }, 1000);
 
+          const fallbackNotice = document.getElementById('mic-fallback-notice');
+          if (fallbackNotice) fallbackNotice.classList.add('hidden');
+
           document.getElementById('record-container').classList.add('recording');
           document.getElementById('btn-record-toggle').classList.add('recording');
           document.getElementById('record-status-label').textContent = 'Recording conversation...';
           document.getElementById('record-active-controls').classList.remove('hidden');
           document.getElementById('audio-playback-container').classList.add('hidden');
         } catch (err) {
-          console.warn('Microphone error:', err);
-          UI.toast('Microphone permission required or unsupported browser. You can type the transcript manually.', 'error');
+          console.warn('Microphone permission / iframe restriction error:', err);
+          const fallbackNotice = document.getElementById('mic-fallback-notice');
+          if (fallbackNotice) fallbackNotice.classList.remove('hidden');
+          document.getElementById('record-status-label').textContent = 'Microphone restricted in iframe. Please upload audio or type transcript.';
+          UI.toast('Microphone restricted by browser iframe. You can upload an audio file or edit the transcript directly.', 'info');
         }
+      },
+
+      handleFileInput: function(file) {
+        if (!file) return;
+        const player = document.getElementById('audio-preview-element');
+        player.src = URL.createObjectURL(file);
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = () => {
+          this.base64Audio = reader.result;
+          this.seconds = 30;
+          this.updateTimerDisplay();
+          document.getElementById('audio-playback-container').classList.remove('hidden');
+          document.getElementById('record-status-label').textContent = 'Audio file loaded: ' + file.name;
+          UI.toast('Audio file loaded. Click "Transcribe & Auto-Generate".', 'info');
+        };
       },
 
       stop: function() {
@@ -1678,6 +2025,81 @@
           App.onTranscriptInput(sampleTranscript);
         }
         UI.toast('Sample classroom voice recording and transcript loaded.', 'success');
+      }
+    };
+
+    // Confetti Animation Controller
+    window.Confetti = {
+      particles: [],
+      animationFrameId: null,
+      spray: function() {
+        const canvas = document.getElementById('completion-confetti-canvas');
+        if (!canvas) return;
+        canvas.classList.remove('hidden');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+
+        const colors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
+        this.particles = [];
+        const count = 120;
+
+        for (let i = 0; i < count; i++) {
+          const fromLeft = i % 2 === 0;
+          this.particles.push({
+            x: fromLeft ? (canvas.width * 0.1) : (canvas.width * 0.9),
+            y: canvas.height * (0.4 + Math.random() * 0.3),
+            vx: (fromLeft ? 1 : -1) * (4 + Math.random() * 9),
+            vy: -(7 + Math.random() * 9),
+            size: 7 + Math.random() * 7,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 12,
+            gravity: 0.28,
+            drag: 0.985,
+            opacity: 1
+          });
+        }
+
+        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+        const startTime = Date.now();
+
+        const render = () => {
+          const elapsed = Date.now() - startTime;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          let activeCount = 0;
+          for (const p of this.particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.vx *= p.drag;
+            p.rotation += p.rotationSpeed;
+            if (elapsed > 2000) {
+              p.opacity = Math.max(0, p.opacity - 0.025);
+            }
+
+            if (p.opacity > 0 && p.y < canvas.height + 25) {
+              activeCount++;
+              ctx.save();
+              ctx.translate(p.x, p.y);
+              ctx.rotate((p.rotation * Math.PI) / 180);
+              ctx.fillStyle = p.color;
+              ctx.globalAlpha = p.opacity;
+              ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+              ctx.restore();
+            }
+          }
+
+          if (activeCount > 0 && elapsed < 4500) {
+            this.animationFrameId = requestAnimationFrame(render);
+          } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.classList.add('hidden');
+          }
+        };
+
+        render();
       }
     };
 
@@ -2166,10 +2588,35 @@
             cardTitle: 'Timber Chair Sanding Expectations',
             studentFriendlySummary: 'Follow the workshop sanding progression to achieve a smooth, scratch-free finish safely before the end of the period.',
             steps: [
-              { id: 'step-1', text: 'Inspect joinery and wipe away excess wood glue with a damp cloth', required: true },
-              { id: 'step-2', text: 'Sand entire chair frame with 120 grit sandpaper, strictly with the wood grain', required: true },
-              { id: 'step-3', text: 'Progress to 240 grit sandpaper for a satin finish, checking corners with fingertips', required: true },
-              { id: 'step-4', text: 'Vacuum sanding dust and return blocks & safety gear to workshop cabinet', required: true }
+              {
+                id: 'step-1',
+                text: 'Stage 1: Surface Preparation & Safety',
+                required: true,
+                subSteps: [
+                  { id: 'sub-1-1', text: 'Put on safety glasses and dust mask before starting' },
+                  { id: 'sub-1-2', text: 'Inspect frame joinery and wipe away excess wood glue' },
+                  { id: 'sub-1-3', text: 'Sand entire chair frame with 120 grit sandpaper along the wood grain' }
+                ]
+              },
+              {
+                id: 'step-2',
+                text: 'Stage 2: Fine Finishing & Quality Inspection',
+                required: true,
+                subSteps: [
+                  { id: 'sub-2-1', text: 'Wipe down chair frame with tack cloth to remove coarse dust' },
+                  { id: 'sub-2-2', text: 'Progress to 240 grit sandpaper for a satin finish, checking corners' },
+                  { id: 'sub-2-3', text: 'Present chair to teacher for tactile inspection before varnishing' }
+                ]
+              },
+              {
+                id: 'step-3',
+                text: 'Stage 3: Workshop Clean-Down & Equipment Storage',
+                required: true,
+                subSteps: [
+                  { id: 'sub-3-1', text: 'Return sandpaper and sanding blocks to Cabinet 3' },
+                  { id: 'sub-3-2', text: 'Vacuum sanding dust and clean down workbench' }
+                ]
+              }
             ],
             successCriteria: [
               'All wood surfaces feel completely smooth to the touch with zero cross-grain scratches',
@@ -2347,6 +2794,88 @@
           this.state.courses.map(c => `<option value="${c.id}">${UI.escapeHtml(c.name)} ${c.section ? `(${c.section})` : ''}</option>`).join('');
       },
 
+      toggleInfo: function(id) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.toggle('hidden');
+        }
+      },
+
+      loadExistingLessons: async function(courseId) {
+        const select = document.getElementById('select-existing-lesson');
+        if (!select) return;
+        select.innerHTML = '<option value="">-- Choose an existing lesson or enter manually below --</option><option value="create_new">+ Create New Standalone Task</option>';
+        try {
+          const resp = await Server.call('getCourseLessons', [courseId]);
+          this.state.existingLessons = (resp && resp.lessons) || [];
+          if (this.state.existingLessons.length > 0) {
+            this.state.existingLessons.forEach(l => {
+              const opt = document.createElement('option');
+              opt.value = l.id;
+              opt.textContent = `📚 ${l.title}`;
+              select.appendChild(opt);
+            });
+          }
+        } catch (err) {
+          console.warn('Load lessons error:', err);
+        }
+      },
+
+      onExistingLessonSelected: function(lessonId) {
+        if (!lessonId || lessonId === 'create_new') {
+          this.updateStudentTargetingUI();
+          return;
+        }
+        const lesson = (this.state.existingLessons || []).find(l => l.id === lessonId);
+        if (!lesson) return;
+
+        const targetStudent = (!this.state.testModeAllStudents && this.state.selectedRecipients.length === 1)
+          ? this.state.selectedRecipients[0]
+          : null;
+
+        let taskTitle = lesson.title.replace(/^Workshop Session \d+:\s*/i, '');
+        let context = lesson.description || '';
+        if (lesson.materials) {
+          context += `\nRequired materials: ${lesson.materials}`;
+        }
+
+        if (targetStudent) {
+          taskTitle = `${taskTitle} (${targetStudent.name})`;
+          context = `Tailored for ${targetStudent.name} on ${lesson.title}.\n${context}`;
+        }
+
+        const titleInput = document.getElementById('input-task-title');
+        if (titleInput) {
+          titleInput.value = taskTitle;
+          this.onTaskTitleInput(taskTitle);
+        }
+        const contextInput = document.getElementById('input-task-context');
+        if (contextInput) {
+          contextInput.value = context;
+          this.onTaskContextInput(context);
+        }
+
+        this.updateStudentTargetingUI();
+        UI.toast(`Loaded lesson: "${lesson.title}"${targetStudent ? ` tailored for ${targetStudent.name}` : ''}`, 'success');
+      },
+
+      updateStudentTargetingUI: function() {
+        const box = document.getElementById('student-targeting-box');
+        const text = document.getElementById('student-targeting-text');
+        if (!box || !text) return;
+
+        if (!this.state.testModeAllStudents && this.state.selectedRecipients.length === 1) {
+          const student = this.state.selectedRecipients[0];
+          box.classList.remove('hidden');
+          text.innerHTML = `🎯 <strong>Targeted Student Work:</strong> Customizing expectations specifically for <strong>${UI.escapeHtml(student.name)}</strong>'s coursework.`;
+        } else if (!this.state.testModeAllStudents && this.state.selectedRecipients.length > 1) {
+          box.classList.remove('hidden');
+          text.innerHTML = `👥 <strong>Differentiated Group Work:</strong> Customizing expectations for <strong>${this.state.selectedRecipients.length} selected students</strong>.`;
+        } else {
+          box.classList.add('hidden');
+        }
+      },
+
       onCourseSelected: async function() {
         const courseId = document.getElementById('select-course').value;
         const courseBox = document.getElementById('course-meta-box');
@@ -2364,6 +2893,9 @@
           const metaText = document.getElementById('course-meta-text');
           if (metaText) metaText.textContent = `Course: ${this.state.selectedCourse.name} — ready to deliver expectations.`;
         }
+
+        // Load existing lessons for this course
+        await this.loadExistingLessons(courseId);
 
         // Load Roster
         try {
@@ -2384,6 +2916,7 @@
         } else {
           this.renderRoster();
         }
+        this.updateStudentTargetingUI();
         this.autoUpdateAllElements();
       },
 
@@ -2840,19 +3373,85 @@
         const container = document.getElementById('steps-editor-container');
         if (!container) return;
         const steps = this.state.currentDraft.steps || [];
-        container.innerHTML = steps.map((s, idx) => `
-          <div class="step-edit-card">
-            <span class="step-handle">${idx + 1}.</span>
-            <div class="flex-1 flex flex-col gap-1">
-              <input type="text" class="form-control text-sm step-input" value="${UI.escapeHtml(s.text)}" oninput="App.state.currentDraft.steps[${idx}].text = this.value; App.autoUpdateAllElements();">
-              <label class="text-xs text-muted flex items-center gap-1" style="cursor: pointer;">
-                <input type="checkbox" ${s.required ? 'checked' : ''} onchange="App.state.currentDraft.steps[${idx}].required = this.checked; App.autoUpdateAllElements();">
-                Required Step
-              </label>
+
+        if (steps.length === 0) {
+          container.innerHTML = '<p class="text-xs text-muted" style="padding: 0.5rem 0;">No steps added yet. Click "+ Add Step" below to create your first expectation step.</p>';
+          return;
+        }
+
+        container.innerHTML = steps.map((s, idx) => {
+          const subSteps = s.subSteps || [];
+          return `
+            <div class="step-edit-card" style="flex-direction: column; align-items: stretch; gap: 0.5rem; margin-bottom: 0.75rem; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem;">
+              <div class="flex items-start gap-2">
+                <span class="step-handle" style="margin-top: 0.35rem; font-weight: 700; color: var(--primary);">${idx + 1}.</span>
+                <div class="flex-1 flex flex-col gap-1">
+                  <input type="text" class="form-control text-sm font-semibold step-input" placeholder="Primary Task (e.g. Stage 1: Surface Preparation)" value="${UI.escapeHtml(s.text)}" oninput="App.state.currentDraft.steps[${idx}].text = this.value; App.autoUpdateAllElements();">
+                  <div class="flex justify-between items-center flex-wrap gap-2" style="margin-top: 0.25rem;">
+                    <label class="text-xs text-muted flex items-center gap-1" style="cursor: pointer;">
+                      <input type="checkbox" ${s.required ? 'checked' : ''} onchange="App.state.currentDraft.steps[${idx}].required = this.checked; App.autoUpdateAllElements();">
+                      Required Step
+                    </label>
+                    <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.addSubStep(${idx})">
+                      + Add Sub-Step ${subSteps.length > 0 ? `(${subSteps.length})` : ''}
+                    </button>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.removeStep(${idx})" title="Remove step">✕</button>
+              </div>
+
+              <!-- Nested Sub-Steps Editor List -->
+              ${subSteps.length > 0 ? `
+                <div class="nested-substeps" style="margin-left: 1.75rem; border-left: 2px solid #93c5fd; padding-left: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; background: #ffffff; border-radius: 4px; padding: 0.5rem 0.75rem;">
+                  <span class="text-xs text-muted font-semibold">Sub-Steps (Student clicks each in order to mark task done):</span>
+                  ${subSteps.map((sub, subIdx) => {
+                    const subVal = typeof sub === 'string' ? sub : (sub.text || '');
+                    return `
+                      <div class="substep-edit-row flex gap-2 items-center">
+                        <span class="text-xs text-muted" style="min-width: 28px; font-weight: 600;">${idx + 1}.${subIdx + 1}</span>
+                        <input type="text" class="form-control text-xs" placeholder="Sub-task action item..." value="${UI.escapeHtml(subVal)}" oninput="App.updateSubStep(${idx}, ${subIdx}, this.value)">
+                        <button type="button" class="btn btn-secondary btn-sm text-xs" style="padding: 2px 6px;" onclick="App.removeSubStep(${idx}, ${subIdx})" title="Remove sub-step">✕</button>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              ` : ''}
             </div>
-            <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.removeStep(${idx})">✕</button>
-          </div>
-        `).join('');
+          `;
+        }).join('');
+      },
+
+      addSubStep: function(stepIdx) {
+        const step = this.state.currentDraft.steps[stepIdx];
+        if (!step) return;
+        if (!step.subSteps) step.subSteps = [];
+        step.subSteps.push({
+          id: `sub-${stepIdx + 1}-${step.subSteps.length + 1}`,
+          text: '',
+          completed: false
+        });
+        this.renderStepsEditor();
+        this.autoUpdateAllElements();
+      },
+
+      removeSubStep: function(stepIdx, subIdx) {
+        const step = this.state.currentDraft.steps[stepIdx];
+        if (step && step.subSteps) {
+          step.subSteps.splice(subIdx, 1);
+          this.renderStepsEditor();
+          this.autoUpdateAllElements();
+        }
+      },
+
+      updateSubStep: function(stepIdx, subIdx, text) {
+        const step = this.state.currentDraft.steps[stepIdx];
+        if (!step || !step.subSteps) return;
+        if (typeof step.subSteps[subIdx] === 'string') {
+          step.subSteps[subIdx] = { id: `sub-${stepIdx + 1}-${subIdx + 1}`, text: text, completed: false };
+        } else {
+          step.subSteps[subIdx].text = text;
+        }
+        this.autoUpdateAllElements();
       },
 
       addChecklistStep: function() {
@@ -2860,7 +3459,8 @@
         this.state.currentDraft.steps.push({
           id: `step-${this.state.currentDraft.steps.length + 1}`,
           text: '',
-          required: true
+          required: true,
+          subSteps: []
         });
         this.renderStepsEditor();
         this.autoUpdateAllElements();
@@ -2870,6 +3470,30 @@
         this.state.currentDraft.steps.splice(idx, 1);
         this.renderStepsEditor();
         this.autoUpdateAllElements();
+      },
+
+      addTeacherCompletionAlert: function(alertData) {
+        const container = document.getElementById('teacher-completion-alerts');
+        if (!container) return;
+        container.classList.remove('hidden');
+
+        const alertEl = document.createElement('div');
+        alertEl.className = 'teacher-alert-banner';
+        alertEl.style.cssText = 'background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;';
+        alertEl.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span style="font-size: 1.25rem;">🎉</span>
+            <div>
+              <strong style="color: #064e3b; font-size: 0.95rem;">Student Task Completed!</strong>
+              <div class="text-xs" style="color: #047857; margin-top: 2px;">
+                <strong>${UI.escapeHtml(alertData.studentName)}</strong> completed all expectation steps for <em>${UI.escapeHtml(alertData.cardTitle)}</em> at ${alertData.completedAt}.
+                ${alertData.reflection ? `<br><span>&ldquo;${UI.escapeHtml(alertData.reflection)}&rdquo;</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="this.parentElement.remove()">Dismiss</button>
+        `;
+        container.prepend(alertEl);
       },
 
       renderCriteriaEditor: function() {
@@ -3075,22 +3699,50 @@
         const body = document.getElementById('preview-modal-body');
         body.innerHTML = `
           <div style="background:white; border-radius:8px; padding:1.25rem; border:1px solid var(--border);">
-            <h3 style="margin-bottom:0.25rem;">${UI.escapeHtml(draft.cardTitle || 'Task Expectations')}</h3>
+            <div class="flex items-center justify-between" style="margin-bottom:0.25rem;">
+              <h3 style="margin:0;">${UI.escapeHtml(draft.cardTitle || 'Task Expectations')}</h3>
+              <span class="badge badge-primary">Student Preview</span>
+            </div>
             <p class="text-sm text-muted" style="margin-bottom:1rem;">${UI.escapeHtml(draft.studentFriendlySummary || '')}</p>
-            <h4 style="font-size:0.95rem; margin-bottom:0.5rem;">Action Steps:</h4>
-            ${(draft.steps || []).map((s, i) => `
-              <div style="display:flex; gap:8px; margin-bottom:6px; font-size:0.9rem;">
-                <input type="checkbox" disabled>
-                <span>${i + 1}. ${UI.escapeHtml(s.text)} ${s.required ? '<strong style="color:var(--error); font-size:0.75rem;">(Required)</strong>' : ''}</span>
-              </div>
-            `).join('')}
+            <h4 style="font-size:0.95rem; margin-bottom:0.5rem;">Action Steps & Sub-Steps:</h4>
+            ${(draft.steps || []).map((s, i) => {
+              const subSteps = s.subSteps || [];
+              return `
+                <div style="margin-bottom: 0.75rem; background: #fafafa; border: 1px solid var(--border); border-radius: 6px; padding: 0.65rem;">
+                  <div style="display:flex; align-items:center; gap:8px; font-size:0.9rem; font-weight:600;">
+                    <input type="checkbox" disabled>
+                    <span>${i + 1}. ${UI.escapeHtml(s.text)} ${s.required ? '<strong style="color:var(--error); font-size:0.75rem;">(Required)</strong>' : ''}</span>
+                    ${subSteps.length > 0 ? `<span class="badge badge-secondary" style="font-size:0.65rem; margin-left:auto;">${subSteps.length} sub-step${subSteps.length === 1 ? '' : 's'} (click arrow to reveal)</span>` : ''}
+                  </div>
+                  ${subSteps.length > 0 ? `
+                    <div style="margin-left: 1.5rem; margin-top: 0.4rem; padding-left: 0.65rem; border-left: 2px solid #bfdbfe; font-size: 0.85rem; color: #4b5563;">
+                      ${subSteps.map((sub, sIdx) => {
+                        const subTxt = typeof sub === 'string' ? sub : (sub.text || '');
+                        return `
+                          <div style="display:flex; align-items:center; gap:6px; margin-top: 0.25rem;">
+                            <input type="checkbox" disabled>
+                            <span>${i + 1}.${sIdx + 1} ${UI.escapeHtml(subTxt)}</span>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
             ${draft.successCriteria && draft.successCriteria.length ? `
               <h4 style="font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">Success Criteria:</h4>
               <ul style="padding-left:1.2rem; font-size:0.85rem;">
                 ${draft.successCriteria.map(c => `<li>${UI.escapeHtml(c)}</li>`).join('')}
               </ul>
             ` : ''}
-            ${draft.teacherMessage ? `<div class="notice notice-info" style="margin-top:1rem; font-size:0.85rem;">💬 ${UI.escapeHtml(draft.teacherMessage)}</div>` : ''}
+            ${draft.materials && draft.materials.length ? `
+              <h4 style="font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">Materials & Tools:</h4>
+              <div class="flex gap-2 flex-wrap">
+                ${draft.materials.map(m => `<span class="badge badge-primary">📦 ${UI.escapeHtml(m.label || m)}</span>`).join('')}
+              </div>
+            ` : ''}
+            ${draft.teacherMessage ? `<div class="notice notice-info" style="margin-top:1rem; font-size:0.85rem;">💬 Teacher Message: ${UI.escapeHtml(draft.teacherMessage)}</div>` : ''}
           </div>
         `;
         document.getElementById('preview-modal').classList.remove('hidden');
@@ -3134,9 +3786,14 @@
     // Student View Controller
     const StudentApp = {
       cardId: null,
+      cardData: null,
+      stepStates: {},
+      celebrationTriggered: false,
 
       init: async function(cardId) {
         this.cardId = cardId || 'demo-token';
+        this.stepStates = {};
+        this.celebrationTriggered = false;
         document.getElementById('teacher-view').classList.add('hidden');
         document.getElementById('student-view').classList.remove('hidden');
         document.getElementById('app-role-badge').textContent = 'Student Portal';
@@ -3147,47 +3804,138 @@
           this.renderCard(resp);
         } catch (err) {
           console.warn('Student card fallback:', err);
-          // Fallback demo data
+          // Rich fallback demo data with nested steps & sub-steps
           this.renderCard({
-            cardTitle: 'Chair Sanding Expectations',
-            studentFriendlySummary: 'Complete the two-stage sanding sequence smoothly before the end of this lesson.',
+            cardTitle: 'Timber Chair Sanding & Workshop Expectations (Jimmy Chen)',
+            studentFriendlySummary: 'Follow the 3 workshop stages to prepare and sand the chair frame smoothly before the end of this lesson.',
             steps: [
-              { id: 'step-1', text: 'Sand the main chair frame using 120 grit sandpaper first', required: true },
-              { id: 'step-2', text: 'Follow up with 240 grit sandpaper for a perfectly smooth surface', required: true },
-              { id: 'step-3', text: 'Return sandpaper and tools to the workshop cabinet when finished', required: true }
+              {
+                id: 'step-1',
+                text: 'Stage 1: Surface Preparation & Safety',
+                required: true,
+                subSteps: [
+                  { id: 'sub-1-1', text: 'Put on safety glasses and dust mask before touching tools' },
+                  { id: 'sub-1-2', text: 'Inspect timber frame joinery for excess dried glue' },
+                  { id: 'sub-1-3', text: 'Sand entire chair frame with 120 grit sandpaper along the grain' }
+                ]
+              },
+              {
+                id: 'step-2',
+                text: 'Stage 2: Fine Finishing & Quality Inspection',
+                required: true,
+                subSteps: [
+                  { id: 'sub-2-1', text: 'Wipe down chair frame with tack cloth to remove coarse dust' },
+                  { id: 'sub-2-2', text: 'Secondary pass with 240 grit sandpaper until surface feels satin smooth' },
+                  { id: 'sub-2-3', text: 'Present chair to teacher for tactile inspection before varnishing' }
+                ]
+              },
+              {
+                id: 'step-3',
+                text: 'Stage 3: Workshop Clean-Down & Tool Storage',
+                required: true,
+                subSteps: [
+                  { id: 'sub-3-1', text: 'Return sandpaper and sanding blocks to Cabinet 3' },
+                  { id: 'sub-3-2', text: 'Brush down workbench and empty dust tray into collection bin' }
+                ]
+              }
             ],
-            successCriteria: ['Surface is completely smooth with no rough edges', 'Tools returned to cabinet'],
-            materials: [{ label: '120 and 240 grit sandpaper' }, { label: 'Dust mask and safety glasses' }],
-            teacherMessage: 'Looking forward to starting varnish next lesson!',
-            checkInQuestion: 'What step will you complete first today?',
+            successCriteria: [
+              'All wood surfaces feel completely smooth to the touch with zero cross-grain scratches',
+              'Safety glasses and dust mask worn continuously during sanding',
+              'Tools returned to cabinet and workstation clean'
+            ],
+            materials: [
+              { label: '120 and 240 grit sandpaper' },
+              { label: 'Cork sanding block & tack cloth' },
+              { label: 'Dust mask and safety glasses' }
+            ],
+            teacherMessage: 'Take your time with the grain — great sanding makes your stain look incredible!',
+            checkInQuestion: 'What grit sandpaper will you start with today?',
             isAcknowledged: false
           });
         }
       },
 
       renderCard: function(card) {
+        this.cardData = card;
         document.getElementById('student-card-title').textContent = card.cardTitle || 'Task Expectations';
         document.getElementById('student-card-summary').textContent = card.studentFriendlySummary || '';
 
-        // Steps
+        // Steps & Sub-Steps Container
         const stepsContainer = document.getElementById('student-steps-container');
         const steps = card.steps || [];
-        stepsContainer.innerHTML = steps.map((s, idx) => `
-          <div class="student-checklist-item" id="student-item-${s.id}">
-            <input type="checkbox" class="student-checkbox" onchange="StudentApp.toggleItem('${s.id}', this.checked)">
-            <div>
-              <span style="font-weight:600; margin-right:4px;">${idx + 1}.</span>
-              <span>${UI.escapeHtml(s.text)}</span>
-              ${s.required ? '<span class="badge badge-draft" style="font-size:0.65rem; margin-left:6px;">Required</span>' : ''}
+
+        stepsContainer.innerHTML = steps.map((s, idx) => {
+          const stepId = s.id || `step-${idx + 1}`;
+          const rawSubSteps = s.subSteps || [];
+
+          // Initialize or preserve step state
+          if (!this.stepStates[stepId]) {
+            this.stepStates[stepId] = {
+              expanded: false, // Per requirement: steps hide sub-steps by default, arrow down reveals
+              completed: false,
+              subSteps: rawSubSteps.map((sub, sIdx) => {
+                if (typeof sub === 'string') {
+                  return { id: `${stepId}-sub-${sIdx + 1}`, text: sub, completed: false };
+                }
+                return { id: sub.id || `${stepId}-sub-${sIdx + 1}`, text: sub.text || '', completed: !!sub.completed };
+              })
+            };
+          }
+
+          const state = this.stepStates[stepId];
+          const hasSubSteps = state.subSteps && state.subSteps.length > 0;
+          const completedSubCount = hasSubSteps ? state.subSteps.filter(sub => sub.completed).length : 0;
+          const isStepDone = hasSubSteps ? (completedSubCount === state.subSteps.length) : state.completed;
+
+          return `
+            <div class="student-step-card ${isStepDone ? 'all-done' : ''}" id="student-step-card-${stepId}" style="margin-bottom: 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: #ffffff;">
+              <div class="student-step-header flex items-center justify-between" style="padding: 0.85rem 1rem; cursor: pointer; background: ${isStepDone ? '#f0fdf4' : '#fafafa'}; border-bottom: ${hasSubSteps && state.expanded ? '1px solid var(--border)' : 'none'}; transition: background 0.2s ease;" onclick="StudentApp.toggleStepExpand('${stepId}')">
+                <div class="flex items-center gap-3 flex-1">
+                  <input type="checkbox" class="student-checkbox" ${isStepDone ? 'checked' : ''} ${hasSubSteps ? 'disabled' : ''} onclick="event.stopPropagation(); StudentApp.toggleStandaloneStep('${stepId}', this.checked)" title="${hasSubSteps ? 'All sub-steps require clicking in order to show task as done' : 'Mark task as done'}">
+                  <div>
+                    <span style="font-weight: 700; margin-right: 4px; color: var(--primary);">${idx + 1}.</span>
+                    <span class="step-title-text" style="${isStepDone ? 'text-decoration: line-through; color: #166534; font-weight: 600;' : 'font-weight: 600;'}">${UI.escapeHtml(s.text)}</span>
+                    ${s.required ? '<span class="badge badge-draft" style="font-size: 0.65rem; margin-left: 6px;">Required</span>' : ''}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  ${hasSubSteps ? `
+                    <span class="${isStepDone ? 'badge badge-sent' : 'text-xs text-muted'}" style="font-weight: 600;">
+                      ${isStepDone ? '✓ Task Done' : `${completedSubCount}/${state.subSteps.length} done`}
+                    </span>
+                    <button type="button" class="step-expand-btn ${state.expanded ? 'open' : ''}" aria-label="Reveal sub-steps" onclick="event.stopPropagation(); StudentApp.toggleStepExpand('${stepId}')">
+                      ▼
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+
+              ${hasSubSteps ? `
+                <div class="student-substeps-list ${state.expanded ? '' : 'collapsed'}" id="substeps-list-${stepId}">
+                  <div class="text-xs text-muted" style="padding: 0.5rem 1rem 0.25rem 1rem; font-weight: 500;">
+                    Click each sub-step below to mark this task as done:
+                  </div>
+                  ${state.subSteps.map((sub, sIdx) => `
+                    <div class="student-substep-item flex items-center gap-3 ${sub.completed ? 'completed' : ''}" style="padding: 0.55rem 1rem 0.55rem 1.75rem; border-top: 1px solid #f1f5f9; cursor: pointer; background: ${sub.completed ? '#f0fdf4' : '#ffffff'};" onclick="StudentApp.toggleSubStep('${stepId}', '${sub.id}')">
+                      <input type="checkbox" class="student-checkbox" ${sub.completed ? 'checked' : ''} onclick="event.stopPropagation(); StudentApp.toggleSubStep('${stepId}', '${sub.id}')">
+                      <span class="substep-text text-sm" style="${sub.completed ? 'text-decoration: line-through; color: #15803d;' : ''}">
+                        <strong style="color: #64748b; font-size: 0.8rem; margin-right: 4px;">${idx + 1}.${sIdx + 1}</strong>
+                        ${UI.escapeHtml(sub.text)}
+                      </span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
 
         // Criteria
         if (card.successCriteria && card.successCriteria.length) {
           document.getElementById('student-criteria-section').classList.remove('hidden');
           document.getElementById('student-criteria-container').innerHTML = `
-            <ul style="padding-left:1.2rem; font-size:0.9rem;">
+            <ul style="padding-left:1.2rem; font-size:0.9rem; line-height:1.6;">
               ${card.successCriteria.map(c => `<li>${UI.escapeHtml(c)}</li>`).join('')}
             </ul>`;
         }
@@ -3197,7 +3945,7 @@
           document.getElementById('student-materials-section').classList.remove('hidden');
           document.getElementById('student-materials-container').innerHTML = card.materials.map(m => `
             <div class="badge badge-primary" style="margin-right:6px; margin-bottom:6px; padding:4px 10px;">
-              📦 ${UI.escapeHtml(m.label)}
+              📦 ${UI.escapeHtml(m.label || m)}
             </div>
           `).join('');
         }
@@ -3224,11 +3972,96 @@
         }
       },
 
-      toggleItem: function(itemId, isChecked) {
-        const el = document.getElementById(`student-item-${itemId}`);
-        if (el) {
-          if (isChecked) el.classList.add('checked');
-          else el.classList.remove('checked');
+      toggleStepExpand: function(stepId) {
+        if (!this.stepStates || !this.stepStates[stepId]) return;
+        this.stepStates[stepId].expanded = !this.stepStates[stepId].expanded;
+        const list = document.getElementById(`substeps-list-${stepId}`);
+        const cardEl = document.getElementById(`student-step-card-${stepId}`);
+        const btn = cardEl ? cardEl.querySelector('.step-expand-btn') : null;
+        if (list) {
+          if (this.stepStates[stepId].expanded) {
+            list.classList.remove('collapsed');
+          } else {
+            list.classList.add('collapsed');
+          }
+        }
+        if (btn) {
+          if (this.stepStates[stepId].expanded) {
+            btn.classList.add('open');
+          } else {
+            btn.classList.remove('open');
+          }
+        }
+      },
+
+      toggleSubStep: function(stepId, subId) {
+        if (!this.stepStates || !this.stepStates[stepId]) return;
+        const state = this.stepStates[stepId];
+        const sub = state.subSteps.find(s => s.id === subId);
+        if (!sub) return;
+        sub.completed = !sub.completed;
+
+        this.renderCard(this.cardData);
+        this.checkAllCompleted();
+      },
+
+      toggleStandaloneStep: function(stepId, isChecked) {
+        if (!this.stepStates || !this.stepStates[stepId]) return;
+        this.stepStates[stepId].completed = isChecked;
+        this.renderCard(this.cardData);
+        this.checkAllCompleted();
+      },
+
+      checkAllCompleted: async function() {
+        if (!this.stepStates) return;
+        const stepIds = Object.keys(this.stepStates);
+        if (stepIds.length === 0) return;
+
+        const allDone = stepIds.every(id => {
+          const s = this.stepStates[id];
+          if (s.subSteps && s.subSteps.length > 0) {
+            return s.subSteps.every(sub => sub.completed);
+          }
+          return s.completed;
+        });
+
+        if (allDone && !this.celebrationTriggered) {
+          this.celebrationTriggered = true;
+
+          // 1. Confetti animation spray!
+          if (window.Confetti && Confetti.spray) {
+            Confetti.spray();
+          }
+
+          // 2. Show student completion banner
+          const banner = document.getElementById('student-completion-banner');
+          if (banner) banner.classList.remove('hidden');
+
+          UI.toast('🎉 Task Completed! Confetti spray and teacher alert triggered!', 'success');
+
+          // 3. Send alert to teacher
+          const studentName = 'Jimmy Chen';
+          const reflection = (document.getElementById('student-ack-input') ? document.getElementById('student-ack-input').value.trim() : '') || 'All steps and sub-steps completed!';
+
+          try {
+            await Server.call('completeStudentCard', [this.cardId, studentName, reflection]);
+          } catch (err) {
+            console.warn('Student card complete notice:', err);
+          }
+
+          // 4. Update teacher live alert notification banner
+          if (window.App && App.addTeacherCompletionAlert) {
+            App.addTeacherCompletionAlert({
+              studentName: studentName,
+              cardTitle: (this.cardData && this.cardData.cardTitle) || 'Task Expectations',
+              completedAt: new Date().toLocaleTimeString(),
+              reflection: reflection
+            });
+          }
+        } else if (!allDone) {
+          this.celebrationTriggered = false;
+          const banner = document.getElementById('student-completion-banner');
+          if (banner) banner.classList.add('hidden');
         }
       },
 

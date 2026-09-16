@@ -11,8 +11,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // In-Memory Database Store (Emulating Google Sheets & Classroom Backend)
 const db = {
   settings: {
-    appBaseUrl: 'https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec',
-    gasWebAppUrl: 'https://script.google.com/macros/s/AKfycbzemO95HbJpupSgeBiLqTxnSkpnul9SWQ1XKTFNWlWlPChxM1wGkWfgmTlBSj7p7s2FLQ/exec',
+    appBaseUrl: 'https://script.google.com/macros/s/AKfycbxLNjG5jEtD-6Nm1JKWIRD-dfdKSw_Ox1ofmV_5wnThNOXGthOVKvcSOoT07NnOTXZjqA/exec',
+    gasWebAppUrl: 'https://script.google.com/macros/s/AKfycbxLNjG5jEtD-6Nm1JKWIRD-dfdKSw_Ox1ofmV_5wnThNOXGthOVKvcSOoT07NnOTXZjqA/exec',
     allowedDomain: 'school.edu.au',
     audioRetentionDays: 30,
     deleteAudioAfterTranscription: true,
@@ -25,6 +25,24 @@ const db = {
     { id: 'course-102', name: 'Year 11 Industrial Technology (Timber)', section: 'Period 4', room: 'Timber Lab' },
     { id: 'course-103', name: 'Year 9 STEM Workshop', section: 'Period 1', room: 'Room 12' }
   ],
+  courseWork: {
+    'course-dummy-test': [
+      { id: 'lesson-dt-1', title: 'Lesson 1: Workshop Safety Orientation & PPE Check', description: 'Practical induction on eye protection, dust filtration, and machinery boundaries.' },
+      { id: 'lesson-dt-2', title: 'Lesson 2: Material Selection & Marking Out', description: 'Grain direction inspection and pencil gauge dimensioning for timber project.' }
+    ],
+    'course-101': [
+      { id: 'lesson-101-1', title: 'Unit 3: Chair Joinery & Dry Fit Assembly', description: 'Inspect mortise and tenon joints, verify square angles, and dry clamp before gluing.' },
+      { id: 'lesson-101-2', title: 'Unit 4: Progressive Timber Sanding & Grain Smoothing', description: '120-grit rough cleanup followed by 240-grit satin finish preparation.' },
+      { id: 'lesson-101-3', title: 'Unit 5: Clear Satin Varnish & Safe Workshop Clean Up', description: 'Light wire wool de-nibbing and application of first protective varnish coat.' }
+    ],
+    'course-102': [
+      { id: 'lesson-102-1', title: 'Major Project Milestone 2: Frame Construction', description: 'Assembly of structural elements and dowel reinforcement.' },
+      { id: 'lesson-102-2', title: 'Surface Preparation & Finishing Schedule', description: 'Abrasive schedule and grain-raising damp wipe.' }
+    ],
+    'course-103': [
+      { id: 'lesson-103-1', title: 'Robotics Sprint 1: Chassis Assembly & Motor Mounting', description: 'Secure DC geared motors and calibrate optical sensors.' }
+    ]
+  },
   students: {
     'course-101': [
       { userId: 'student-1', name: 'Jimmy Chen', email: 'jimmy.chen@school.edu.au' },
@@ -158,6 +176,17 @@ const rpcHandlers = {
     return {
       ok: true,
       data: { students: list }
+    };
+  },
+
+  getCourseLessons(courseId) {
+    const lessons = db.courseWork[courseId] || [
+      { id: `lesson-${courseId}-1`, title: 'Lesson 1: Workshop Core Competency & Task Setup', description: 'Essential practical skills and work safety.' },
+      { id: `lesson-${courseId}-2`, title: 'Lesson 2: Individual Practical Execution & Assessment', description: 'Student practical work and step-by-step checklist.' }
+    ];
+    return {
+      ok: true,
+      data: { lessons: lessons }
     };
   },
 
@@ -396,6 +425,28 @@ const rpcHandlers = {
         acknowledgedAt: now,
         acknowledgementText: acknowledgementText,
         message: 'Expectations acknowledged!'
+      }
+    };
+  },
+
+  completeStudentCard(cardId, studentId, studentName) {
+    const card = db.cards.find(c => c.cardId === cardId || c.cardId === 'card-demo-1') || db.cards[0];
+    const now = new Date().toISOString();
+    if (card && card.recipients) {
+      const rec = card.recipients.find(r => r.studentUserId === studentId || r.studentName === studentName) || card.recipients[0];
+      if (rec) {
+        rec.completedAt = now;
+        rec.acknowledgedAt = rec.acknowledgedAt || now;
+      }
+    }
+    return {
+      ok: true,
+      data: {
+        cardId: cardId,
+        studentId: studentId,
+        studentName: studentName || 'Student',
+        completedAt: now,
+        message: 'Student completion recorded and teacher alerted.'
       }
     };
   },
