@@ -145,6 +145,14 @@ const Config = {
   isClassroomDeliveryEnabled() {
     const val = this.get('ENABLE_CLASSROOM_DELIVERY');
     return val === null ? true : val === 'true';
+  },
+
+  getTeacherName() {
+    return this.get('TEACHER_NAME') || '';
+  },
+
+  setTeacherName(name) {
+    this.set('TEACHER_NAME', name || '');
   }
 };
 
@@ -794,6 +802,62 @@ const ClassroomHelper = {
   },
 
   /**
+   * Creates a Google Classroom Stream Announcement.
+   * Format requested by user:
+   * Hello {recipientGreeting},
+   *
+   * Open the Expectation Card linked for "{taskTitle}".
+   *
+   * Kind Regards,
+   * {teacherName}
+   */
+  createStreamAnnouncement(courseId, recipientGreeting, taskTitle, webAppCardUrl, teacherName, studentUserIds = []) {
+    try {
+      const isIndividual = Array.isArray(studentUserIds) && studentUserIds.length > 0;
+      const tName = teacherName || Config.getTeacherName() || 'Teacher';
+
+      const announcementText = [
+        `Hello ${recipientGreeting || 'Class'},`,
+        '',
+        `Open the Expectation Card linked for "${taskTitle || 'Task'}".`,
+        '',
+        'Kind Regards,',
+        tName
+      ].join('\n');
+
+      const announcementPayload = {
+        text: announcementText,
+        state: 'PUBLISHED',
+        assigneeMode: isIndividual ? 'INDIVIDUAL_STUDENTS' : 'ALL_STUDENTS',
+        materials: [
+          {
+            link: {
+              url: webAppCardUrl,
+              title: `Expectation Card: ${taskTitle || 'Task'}`.substring(0, 100)
+            }
+          }
+        ]
+      };
+
+      if (isIndividual) {
+        announcementPayload.individualStudentsOptions = {
+          studentIds: studentUserIds
+        };
+      }
+
+      const created = Classroom.Courses.Announcements.create(announcementPayload, courseId);
+      return {
+        id: created.id,
+        alternateLink: created.alternateLink || '',
+        text: created.text
+      };
+    } catch (err) {
+      console.error('Error creating Stream announcement in Classroom:', err);
+      throw new Error(`Failed to post Stream announcement to Google Classroom: ${err.message}`);
+    }
+  },
+
+  /**
    * Creates an ungraded Coursework item targeted to specific students or all students.
    * Directs students to their personal task expectation card.
    */
@@ -1219,10 +1283,10 @@ function getCard(cardId) {
 }
 
 /**
- * Posts a saved card to Google Classroom and marks it as SENT.
+ * Posts a saved card to Google Classroom Stream as an Announcement and marks it as SENT.
  * Idempotent: Can safely be retried if previously failed.
  */
-function postCardToClassroom(cardId) {
+function postCardToClassroom(cardId, teacherName) {
   try {
     validateTeacherAccess();
     if (!cardId) throw new Error('Card ID is required.');
@@ -1247,50 +1311,63 @@ function postCardToClassroom(cardId) {
 
     const now = new Date().toISOString();
     const isWholeClass = recipients.some(r => r.StudentGoogleUserId === 'ALL_STUDENTS' || r.StudentEmail === 'all@classroom.local');
-    // If whole class, studentUserIds = [] -> Classroom API creates coursework with assigneeMode: 'ALL_STUDENTS'
+    // If whole class, studentUserIds = [] -> Classroom API creates announcement with assigneeMode: 'ALL_STUDENTS'
     const studentUserIds = isWholeClass ? [] : recipients.map(r => r.StudentGoogleUserId).filter(id => id && id !== 'ALL_STUDENTS');
 
-    // Build the secure, unguessable student card link
+    // Build recipient greeting for announcement template: Hello "Student/s/class name"
+    let recipientGreeting = 'Class';
+    if (!isWholeClass && recipients.length === 1) {
+      recipientGreeting = recipients[0].StudentName || 'Student';
+    } else if (!isWholeClass && recipients.length > 1) {
+      recipientGreeting = recipients.map(r => r.StudentName || 'Student').join(', ');
+    } else {
+      recipientGreeting = card.ClassName || 'Class';
+    }
+
+    const tName = teacherName || Config.getTeacherName() || 'Teacher';
+
+    // Build the public student card link
     const baseUrl = Config.getAppBaseUrl();
     const studentCardUrl = `${baseUrl}?mode=student&card=${encodeURIComponent(cardId)}`;
 
-    let courseWorkItem = null;
+    let announcementItem = null;
     let deliveryError = '';
 
-    // Check if CourseWork item already exists to prevent duplicates on retry
+    // Check if Announcement item already exists to prevent duplicates on retry
     if (card.ClassroomCourseWorkId) {
       try {
-        courseWorkItem = Classroom.Courses.CourseWork.get(card.ClassId, card.ClassroomCourseWorkId);
+        announcementItem = Classroom.Courses.Announcements.get(card.ClassId, card.ClassroomCourseWorkId);
       } catch (e) {
-        console.warn('Existing coursework item not found or inaccessible, creating fresh one:', e);
-        courseWorkItem = null;
+        console.warn('Existing announcement item not found or inaccessible, creating fresh one:', e);
+        announcementItem = null;
       }
     }
 
-    if (!courseWorkItem) {
+    if (!announcementItem) {
       try {
-        courseWorkItem = ClassroomHelper.createCourseWorkItem(
+        announcementItem = ClassroomHelper.createStreamAnnouncement(
           card.ClassId,
-          card.CardTitle || 'Expectations',
-          card.StudentFriendlySummary || '',
+          recipientGreeting,
+          card.TaskTitle || card.Title || 'Task Expectations',
           studentCardUrl,
+          tName,
           studentUserIds
         );
       } catch (postErr) {
-        deliveryError = postErr.message || 'Classroom posting failed';
-        console.error('Classroom posting failure:', postErr);
+        deliveryError = postErr.message || 'Classroom Stream posting failed';
+        console.error('Classroom Stream posting failure:', postErr);
       }
     }
 
     // Update card record
-    const newStatus = courseWorkItem ? 'SENT' : 'DELIVERY_FAILED';
+    const newStatus = announcementItem ? 'SENT' : 'DELIVERY_FAILED';
     SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARDS, 'CardId', cardId, 'Status', newStatus);
     SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARDS, 'CardId', cardId, 'UpdatedAt', now);
     SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARDS, 'CardId', cardId, 'DeliveryError', deliveryError);
 
-    if (courseWorkItem) {
-      SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARDS, 'CardId', cardId, 'ClassroomCourseWorkId', courseWorkItem.id);
-      SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARDS, 'CardId', cardId, 'ClassroomAlternateLink', courseWorkItem.alternateLink || '');
+    if (announcementItem) {
+      SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARDS, 'CardId', cardId, 'ClassroomCourseWorkId', announcementItem.id);
+      SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARDS, 'CardId', cardId, 'ClassroomAlternateLink', announcementItem.alternateLink || '');
       SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARDS, 'CardId', cardId, 'SentAt', now);
     }
 
@@ -1301,9 +1378,9 @@ function postCardToClassroom(cardId) {
         'RecipientId',
         r.RecipientId,
         'ClassroomDeliveryStatus',
-        courseWorkItem ? 'SENT' : 'FAILED'
+        announcementItem ? 'SENT' : 'FAILED'
       );
-      if (courseWorkItem) {
+      if (announcementItem) {
         SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARD_RECIPIENTS, 'RecipientId', r.RecipientId, 'SentAt', now);
       } else {
         SheetHelper.updateFieldByColumn(CONFIG.SHEET_NAMES.CARD_RECIPIENTS, 'RecipientId', r.RecipientId, 'LastError', deliveryError);
@@ -1312,24 +1389,24 @@ function postCardToClassroom(cardId) {
 
     lock.releaseLock();
 
-    logAuditEvent(courseWorkItem ? 'CARD_SENT' : 'CLASSROOM_DELIVERY_FAILED', {
+    logAuditEvent(announcementItem ? 'CARD_SENT' : 'CLASSROOM_DELIVERY_FAILED', {
       cardId: cardId,
       recipientCount: recipients.length,
-      classroomCourseWorkId: courseWorkItem ? courseWorkItem.id : null,
+      classroomAnnouncementId: announcementItem ? announcementItem.id : null,
       error: deliveryError
     });
 
-    if (!courseWorkItem) {
-      return errorResponse('CLASSROOM_DELIVERY_FAILED', `Card saved, but posting to Google Classroom failed: ${deliveryError}`, { cardId });
+    if (!announcementItem) {
+      return errorResponse('CLASSROOM_DELIVERY_FAILED', `Card saved, but posting to Google Classroom Stream failed: ${deliveryError}`, { cardId });
     }
 
     return successResponse({
       cardId: cardId,
       status: 'SENT',
-      classroomCourseWorkId: courseWorkItem.id,
-      classroomAlternateLink: courseWorkItem.alternateLink || '',
+      classroomAnnouncementId: announcementItem.id,
+      classroomAlternateLink: announcementItem.alternateLink || '',
       recipientCount: recipients.length,
-      message: 'Card successfully posted to Google Classroom.'
+      message: 'Card successfully posted to Google Classroom Stream.'
     });
   } catch (err) {
     return handleServerError(err, 'postCardToClassroom');
@@ -1337,9 +1414,9 @@ function postCardToClassroom(cardId) {
 }
 
 /**
- * Test function: posts an instant test coursework item to a Google Classroom course.
+ * Test function: posts an instant test announcement to a Google Classroom Stream.
  * Does not require selecting a specific student (assigns to ALL_STUDENTS).
- * Returns the created coursework id and alternateLink for immediate teacher verification.
+ * Returns the created announcement id and alternateLink for immediate teacher verification.
  */
 function testClassroomDelivery(courseId) {
   try {
@@ -1349,24 +1426,22 @@ function testClassroomDelivery(courseId) {
     const baseUrl = Config.getAppBaseUrl();
     const testCardId = 'test-' + generateUuid_().substring(0, 8);
     const testUrl = `${baseUrl}?mode=student&card=${encodeURIComponent(testCardId)}`;
+    const teacherName = Config.getTeacherName() || 'Teacher';
 
-    const title = '🧪 Task Expectations Test Delivery';
-    const summary = 'Test expectation card created to verify Google Classroom API integration for entire class (no student selection required).';
-
-    // Post with assigneeMode: 'ALL_STUDENTS' (empty array)
-    const courseWork = ClassroomHelper.createCourseWorkItem(
+    const announcement = ClassroomHelper.createStreamAnnouncement(
       courseId,
-      title,
-      summary,
+      'Class',
+      'Test Activity',
       testUrl,
+      teacherName,
       []
     );
 
     return successResponse({
-      courseWorkId: courseWork.id,
-      alternateLink: courseWork.alternateLink || '',
-      title: courseWork.title,
-      message: 'Test coursework successfully published to Google Classroom!'
+      announcementId: announcement.id,
+      alternateLink: announcement.alternateLink || '',
+      title: 'Task Expectations Stream Announcement',
+      message: 'Test announcement successfully published to Google Classroom Stream!'
     });
   } catch (err) {
     return handleServerError(err, 'testClassroomDelivery');
@@ -1441,8 +1516,8 @@ function duplicateCard(cardId) {
 // ============================================================================
 
 /**
- * Validates a student's permission to view a specific card.
- * Throws an error if the user's active email is not an authorized recipient.
+ * Validates access to view a specific card.
+ * Students can open the card link directly as an HTML webpage without being forced to sign in or accept permissions.
  */
 function validateStudentCardAccess(cardId) {
   let userEmail = '';
@@ -1452,28 +1527,29 @@ function validateStudentCardAccess(cardId) {
     userEmail = '';
   }
 
-  if (!userEmail) {
-    throw new Error('Student authorization failed: Please sign in with your school Google account.');
-  }
-
   // Allow teachers to preview student card
-  if (isUserTeacher_(userEmail)) {
+  if (userEmail && isUserTeacher_(userEmail)) {
     return { userEmail: userEmail, isTeacherPreview: true, recipient: null };
   }
 
   const recipients = SheetHelper.getAllRowsAsObjects(CONFIG.SHEET_NAMES.CARD_RECIPIENTS)
-    .filter(r => r.CardId === cardId && String(r.StudentEmail).toLowerCase() === userEmail);
+    .filter(r => r.CardId === cardId);
 
-  if (recipients.length === 0) {
-    logAuditEvent('STUDENT_ACCESS_DENIED', {
-      cardId: cardId,
-      userEmail: userEmail,
-      reason: 'User email not found in recipient list for this card'
-    });
-    throw new Error('Access denied: You are not a registered recipient for this expectation card.');
+  // If userEmail matches a specific student recipient
+  if (userEmail) {
+    const matched = recipients.find(r => String(r.StudentEmail).toLowerCase() === userEmail);
+    if (matched) {
+      return { userEmail: userEmail, isTeacherPreview: false, recipient: matched };
+    }
   }
 
-  return { userEmail: userEmail, isTeacherPreview: false, recipient: recipients[0] };
+  // Allow direct HTML web page access via Classroom Stream link
+  const fallbackRecipient = recipients.length > 0 ? recipients[0] : null;
+  return {
+    userEmail: userEmail || 'student@classroom.local',
+    isTeacherPreview: false,
+    recipient: fallbackRecipient
+  };
 }
 
 /**
@@ -1746,29 +1822,36 @@ function transcribeWithGemini_(base64Audio, mimeType, apiKey) {
 function generateExpectationsFromTranscript(payload) {
   try {
     validateTeacherAccess();
-    if (!payload || (!payload.transcript && !payload.teacherNotes)) {
-      throw new Error('A transcript or teacher notes are required to generate task expectations.');
-    }
-
-    const apiKey = Config.getGeminiApiKey();
-    if (!apiKey) {
-      throw new Error('Gemini API key is not configured. Please set GEMINI_API_KEY in Script Properties.');
+    if (!payload || (!payload.transcript && !payload.teacherNotes && !payload.taskTitle && !payload.taskContext)) {
+      throw new Error('Please provide a task title, context, notes, or transcript to generate task expectations.');
     }
 
     const transcript = sanitiseText_(payload.transcript || '');
     const className = sanitiseText_(payload.className || 'Class');
-    const taskTitle = sanitiseText_(payload.taskTitle || 'Activity');
+    const taskTitle = sanitiseText_(payload.taskTitle || 'Task Expectations');
     const taskContext = sanitiseText_(payload.taskContext || '');
     const teacherNotes = sanitiseText_(payload.teacherNotes || '');
 
+    const apiKey = Config.getGeminiApiKey();
+    if (!apiKey) {
+      console.warn('Gemini API key is not configured. Using rule-based synthesizer fallback.');
+      const fallbackCard = synthesizeCardFallback_(taskTitle, taskContext, teacherNotes, transcript);
+      logAuditEvent('AI_CARD_GENERATED_FALLBACK', { taskTitle: taskTitle });
+      return successResponse({
+        cardData: validateAndNormalizeCardStructure_(fallbackCard),
+        message: 'Expectation card draft generated from instructions.'
+      });
+    }
+
     const systemPrompt = [
-      'You are an expert pedagogical assistant helping high school teachers convert spoken conversation notes into clear, structured, student-friendly task expectations.',
+      'You are an expert pedagogical assistant helping high school teachers convert instructions and conversation notes into clear, structured, student-friendly task expectations with concrete steps and sub-steps.',
       'Language: Australian / UK English.',
-      'CRITICAL SAFETY & PRIVACY RULES:',
+      'CRITICAL SAFETY & PEDAGOGICAL RULES:',
       '- Respond with valid JSON ONLY matching the requested schema. No markdown backticks, no markdown formatting outside JSON.',
+      '- Break the task into 2 to 5 primary actionable steps.',
+      '- Under each primary step, provide 1 to 3 concrete, observable sub-steps in the "subSteps" array.',
       '- Do NOT invent marks, consequences, behaviour allegations, disciplinary measures, medical details, or accommodations not stated.',
       '- Do NOT invent dates or deadlines unless explicitly stated by the teacher (e.g. "by the end of this period").',
-      '- Turn vague directions into 3 to 7 concrete, actionable, observable checklist steps.',
       '- Tone: Supportive, clear, respectful, direct, and empowering.',
       '- Student-friendly summary must be 1 to 2 concise sentences.',
       '- Flag any teacher ambiguity or incomplete instructions in teacherOnlyNotes so the teacher can review them.'
@@ -1777,10 +1860,9 @@ function generateExpectationsFromTranscript(payload) {
     const userPrompt = [
       `Class: ${className}`,
       `Task Title: ${taskTitle}`,
-      taskContext ? `Task Context: ${taskContext}` : '',
+      taskContext ? `Task Context / Instructions: ${taskContext}` : '',
       teacherNotes ? `Teacher Specific Notes: ${teacherNotes}` : '',
-      '',
-      `Transcript of conversation:\n"""\n${transcript}\n"""`,
+      transcript ? `Transcript of conversation:\n"""\n${transcript}\n"""` : '',
       '',
       'Return a single JSON object with EXACTLY this structure:',
       '{',
@@ -1789,9 +1871,16 @@ function generateExpectationsFromTranscript(payload) {
       '  "steps": [',
       '    {',
       '      "id": "step-1",',
-      '      "text": "string (actionable, clear instruction)",',
+      '      "text": "string (primary action, e.g. Gather research sources)",',
       '      "required": true,',
-      '      "dueDate": ""',
+      '      "dueDate": "",',
+      '      "subSteps": [',
+      '        {',
+      '          "id": "sub-1-1",',
+      '          "text": "string (specific actionable sub-step, e.g. Open the digital library portal and locate 2 credible articles)",',
+      '          "required": true',
+      '        }',
+      '      ]',
       '    }',
       '  ],',
       '  "successCriteria": [',
@@ -1809,43 +1898,180 @@ function generateExpectationsFromTranscript(payload) {
       '}'
     ].filter(Boolean).join('\n');
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const requestBody = {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.2
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const requestBody = {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.2
+        }
+      };
+
+      const response = UrlFetchApp.fetch(url, {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(requestBody),
+        muteHttpExceptions: true
+      });
+
+      const code = response.getResponseCode();
+      const text = response.getContentText();
+
+      if (code === 200) {
+        const resultJson = JSON.parse(text);
+        const rawContent = resultJson.candidates[0].content.parts[0].text;
+        const cardData = validateAndNormalizeCardStructure_(JSON.parse(rawContent));
+
+        logAuditEvent('AI_CARD_GENERATED', { taskTitle: taskTitle });
+
+        return successResponse({
+          cardData: cardData,
+          message: 'Expectation card draft generated for review.'
+        });
+      } else {
+        console.warn(`Gemini generation HTTP ${code}: ${text}. Falling back to rule-based parser.`);
       }
-    };
-
-    const response = UrlFetchApp.fetch(url, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(requestBody),
-      muteHttpExceptions: true
-    });
-
-    const code = response.getResponseCode();
-    const text = response.getContentText();
-
-    if (code !== 200) {
-      throw new Error(`Gemini generation failed (HTTP ${code}): ${text}`);
+    } catch (apiErr) {
+      console.warn('Gemini API call failed, using rule-based synthesis:', apiErr);
     }
 
-    const resultJson = JSON.parse(text);
-    const rawContent = resultJson.candidates[0].content.parts[0].text;
-    const cardData = validateAndNormalizeCardStructure_(JSON.parse(rawContent));
-
-    logAuditEvent('AI_CARD_GENERATED', { taskTitle: taskTitle });
-
+    const fallbackCard = synthesizeCardFallback_(taskTitle, taskContext, teacherNotes, transcript);
     return successResponse({
-      cardData: cardData,
+      cardData: validateAndNormalizeCardStructure_(fallbackCard),
       message: 'Expectation card draft generated for review.'
     });
   } catch (err) {
     return handleServerError(err, 'generateExpectationsFromTranscript');
   }
+}
+
+/**
+ * Fallback synthesizer that parses structured steps and sub-steps directly from user inputs.
+ */
+function synthesizeCardFallback_(taskTitle, taskContext, teacherNotes, transcript) {
+  const title = taskTitle || 'Task Expectations';
+  const combined = [taskContext, teacherNotes, transcript].filter(Boolean).join('\n');
+  const lines = combined.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  const steps = [];
+  let currentStep = null;
+
+  lines.forEach((line) => {
+    const isNumbered = /^(?:step\s*)?\d+[\.\:\)]\s*(.*)/i.exec(line);
+    const isBullet = /^[\-\*\•]\s*(.*)/.exec(line);
+    const isSubBullet = /^[\t ]+[\-\*\•]\s*(.*)/.exec(line);
+
+    if (isNumbered) {
+      const text = isNumbered[1].trim();
+      currentStep = {
+        id: `step-${steps.length + 1}`,
+        text: text,
+        required: true,
+        dueDate: '',
+        completed: false,
+        subSteps: []
+      };
+      steps.push(currentStep);
+    } else if (isSubBullet && currentStep) {
+      currentStep.subSteps.push({
+        id: `sub-${steps.length}-${currentStep.subSteps.length + 1}`,
+        text: isSubBullet[1].trim(),
+        required: true,
+        completed: false
+      });
+    } else if (isBullet) {
+      const text = isBullet[1].trim();
+      if (currentStep && currentStep.subSteps.length < 3) {
+        currentStep.subSteps.push({
+          id: `sub-${steps.length}-${currentStep.subSteps.length + 1}`,
+          text: text,
+          required: true,
+          completed: false
+        });
+      } else {
+        currentStep = {
+          id: `step-${steps.length + 1}`,
+          text: text,
+          required: true,
+          dueDate: '',
+          completed: false,
+          subSteps: []
+        };
+        steps.push(currentStep);
+      }
+    } else if (line.length > 5) {
+      if (!currentStep) {
+        currentStep = {
+          id: `step-${steps.length + 1}`,
+          text: line,
+          required: true,
+          dueDate: '',
+          completed: false,
+          subSteps: []
+        };
+        steps.push(currentStep);
+      } else if (currentStep.subSteps.length < 2) {
+        currentStep.subSteps.push({
+          id: `sub-${steps.length}-${currentStep.subSteps.length + 1}`,
+          text: line,
+          required: true,
+          completed: false
+        });
+      } else {
+        currentStep = {
+          id: `step-${steps.length + 1}`,
+          text: line,
+          required: true,
+          dueDate: '',
+          completed: false,
+          subSteps: []
+        };
+        steps.push(currentStep);
+      }
+    }
+  });
+
+  if (steps.length === 0) {
+    steps.push({
+      id: 'step-1',
+      text: `Begin work on ${title}.`,
+      required: true,
+      dueDate: '',
+      completed: false,
+      subSteps: [
+        { id: 'sub-1-1', text: 'Review all instructions and materials provided.', required: true, completed: false },
+        { id: 'sub-1-2', text: 'Complete the primary objectives outlined for this task.', required: true, completed: false }
+      ]
+    });
+    steps.push({
+      id: 'step-2',
+      text: 'Perform a final check of your work.',
+      required: true,
+      dueDate: '',
+      completed: false,
+      subSteps: [
+        { id: 'sub-2-1', text: 'Verify all success criteria are met before finishing.', required: true, completed: false }
+      ]
+    });
+  }
+
+  const successCriteria = [
+    `All steps for "${title}" are completed accurately.`,
+    'Work has been reviewed against instructions before submission.'
+  ];
+
+  return {
+    cardTitle: title,
+    studentFriendlySummary: taskContext || `Follow these step-by-step expectations to complete ${title}.`,
+    teacherMessage: 'Take your time, read each step carefully, and check them off as you progress.',
+    checkInQuestion: 'What step will you begin with today?',
+    teacherOnlyNotes: '',
+    steps: steps,
+    successCriteria: successCriteria,
+    materials: [{ label: 'Classroom Materials / Workbook', url: '' }]
+  };
 }
 
 /**
@@ -2178,6 +2404,7 @@ function getSettings() {
       audioRetentionDays: Config.getAudioRetentionDays(),
       deleteAudioAfterTranscription: Config.getDeleteAudioAfterTranscription(),
       classroomDeliveryEnabled: Config.isClassroomDeliveryEnabled(),
+      teacherName: Config.getTeacherName(),
       hasGeminiApiKey: Boolean(Config.getGeminiApiKey())
     });
   } catch (err) {
@@ -2201,6 +2428,9 @@ function saveSettings(payload) {
     }
     if (payload.allowedDomain !== undefined) {
       Config.set('ALLOWED_TEACHER_DOMAIN', String(payload.allowedDomain).trim().toLowerCase());
+    }
+    if (payload.teacherName !== undefined) {
+      Config.setTeacherName(payload.teacherName);
     }
 
     return successResponse({ message: 'Settings saved successfully.' });

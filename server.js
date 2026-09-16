@@ -17,6 +17,7 @@ const db = {
     audioRetentionDays: 30,
     deleteAudioAfterTranscription: true,
     classroomDeliveryEnabled: true,
+    teacherName: 'Mr. Smith',
     geminiApiKey: process.env.GEMINI_API_KEY || ''
   },
   courses: [
@@ -305,15 +306,40 @@ const rpcHandlers = {
     };
   },
 
-  postCardToClassroom(cardId) {
+  postCardToClassroom(cardId, teacherName) {
     const card = db.cards.find(c => c.cardId === cardId);
     if (!card) return { ok: false, error: { message: 'Card not found.' } };
 
+    const tName = teacherName || db.settings.teacherName || 'Teacher';
     const now = new Date().toISOString();
     card.status = 'SENT';
     card.sentAt = now;
-    card.classroomCourseWorkId = 'cw-' + Date.now();
+    card.classroomAnnouncementId = 'announcement-' + Date.now();
     card.classroomAlternateLink = 'https://classroom.google.com';
+
+    // Format greeting for Stream announcement
+    let greeting = 'Class';
+    const recipients = card.recipients || [];
+    const isWholeClass = recipients.some(r => r.studentUserId === 'ALL_STUDENTS' || r.studentEmail === 'all@classroom.local');
+    if (!isWholeClass && recipients.length === 1) {
+      greeting = recipients[0].studentName || 'Student';
+    } else if (!isWholeClass && recipients.length > 1) {
+      greeting = recipients.map(r => r.studentName || 'Student').join(', ');
+    } else {
+      greeting = card.className || 'Class';
+    }
+
+    const taskTitle = card.taskTitle || card.title || 'Practical Task';
+    const streamText = [
+      `Hello ${greeting},`,
+      '',
+      `Open the Expectation Card linked for "${taskTitle}".`,
+      '',
+      'Kind Regards,',
+      tName
+    ].join('\n');
+
+    card.announcementText = streamText;
 
     (card.recipients || []).forEach(r => {
       r.deliveryStatus = 'SENT';
@@ -325,24 +351,36 @@ const rpcHandlers = {
       data: {
         cardId: cardId,
         status: 'SENT',
-        classroomCourseWorkId: card.classroomCourseWorkId,
+        classroomAnnouncementId: card.classroomAnnouncementId,
         classroomAlternateLink: card.classroomAlternateLink,
+        announcementText: streamText,
         recipientCount: (card.recipients || []).length,
-        message: 'Card posted to Google Classroom.'
+        message: 'Expectation card successfully posted to Google Classroom Stream Announcement!'
       }
     };
   },
 
-  testClassroomDelivery(courseId) {
+  testClassroomDelivery(courseId, teacherName) {
     const course = db.courses.find(c => c.id === courseId) || { name: 'Test Course' };
-    const cwId = 'cw-test-' + Date.now();
+    const annId = 'ann-test-' + Date.now();
+    const tName = teacherName || db.settings.teacherName || 'Teacher';
+    const streamText = [
+      `Hello ${course.name},`,
+      '',
+      'Open the Expectation Card linked for "Test Task Expectations".',
+      '',
+      'Kind Regards,',
+      tName
+    ].join('\n');
+
     return {
       ok: true,
       data: {
-        courseWorkId: cwId,
+        classroomAnnouncementId: annId,
         alternateLink: 'https://classroom.google.com',
-        title: '🧪 Task Expectations Test Delivery',
-        message: `Test coursework successfully published to Google Classroom for ${course.name}!`
+        title: '🧪 Task Expectations Stream Announcement',
+        announcementText: streamText,
+        message: `Stream announcement successfully published to Google Classroom for ${course.name}!`
       }
     };
   },
@@ -483,23 +521,39 @@ const rpcHandlers = {
     };
   },
 
-  async generateExpectationsFromTranscript(payload) {
+  async generateExpectationsFromTranscript(payload = {}) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
       try {
         const { GoogleGenAI } = require('@google/genai');
         const ai = new GoogleGenAI({ apiKey });
 
-        const prompt = `You are an expert pedagogical assistant converting spoken teacher conversation notes into clear, structured, student-friendly task expectations.
+        const prompt = `You are an expert pedagogical assistant converting spoken teacher conversation notes and classroom context into clear, structured, student-friendly task expectations with actionable steps and sub-steps.
 Class: ${payload.className || 'Class'}
-Task: ${payload.taskTitle || 'Activity'}
+Task Title: ${payload.taskTitle || 'Activity'}
+Task Context / Instructions: ${payload.taskContext || ''}
+Teacher Notes: ${payload.teacherNotes || ''}
 Transcript: """${payload.transcript || ''}"""
+
+CRITICAL:
+- Turn the instructions and context into 2 to 5 actionable steps.
+- Each step MUST have 1 to 4 concrete sub-steps detailing what the student actually does.
+- All steps and sub-steps must be grounded in the teacher's task title, context, and transcript.
 
 Return JSON matching:
 {
   "cardTitle": "string",
   "studentFriendlySummary": "string (1-2 sentences)",
-  "steps": [{ "id": "step-1", "text": "string", "required": true }],
+  "steps": [
+    {
+      "id": "step-1",
+      "text": "string (overarching step description)",
+      "required": true,
+      "subSteps": [
+        { "id": "sub-1-1", "text": "string (specific action)" }
+      ]
+    }
+  ],
   "successCriteria": ["string"],
   "materials": [{ "label": "string", "url": "" }],
   "checkInQuestion": "string",
@@ -514,35 +568,170 @@ Return JSON matching:
         });
 
         const json = JSON.parse(resp.text);
-        return { ok: true, data: { cardData: json } };
+        if (json && json.steps && json.steps.length > 0) {
+          // Normalize sub-steps
+          json.steps.forEach((s, idx) => {
+            s.id = s.id || `step-${idx + 1}`;
+            s.required = s.required !== false;
+            if (!Array.isArray(s.subSteps)) {
+              s.subSteps = [];
+            } else {
+              s.subSteps.forEach((sub, sIdx) => {
+                if (typeof sub === 'string') s.subSteps[sIdx] = { id: `sub-${idx + 1}-${sIdx + 1}`, text: sub };
+                else sub.id = sub.id || `sub-${idx + 1}-${sIdx + 1}`;
+              });
+            }
+          });
+          return { ok: true, data: { cardData: json } };
+        }
       } catch (err) {
-        console.warn('Gemini generation API call error, using fallback:', err.message);
+        console.warn('Gemini generation API call error, using intelligent parser fallback:', err.message);
       }
     }
 
-    // Default structured draft
+    // Intelligent synthesizer based on teacher's actual inputs
+    const taskTitle = (payload.taskTitle || '').trim();
+    const taskContext = (payload.taskContext || '').trim();
+    const transcript = (payload.transcript || '').trim();
+    const teacherNotes = (payload.teacherNotes || '').trim();
+
+    const title = taskTitle || (transcript.match(/for\s+([a-zA-Z0-9\s]{3,30})/i) ? transcript.match(/for\s+([a-zA-Z0-9\s]{3,30})/i)[1].trim() : 'Task Expectations');
+    const cardTitle = title.endsWith('Expectations') ? title : `${title} Expectations`;
+
+    // Combine all instructions from teacher
+    const combinedInstructions = [taskContext, transcript, teacherNotes].filter(Boolean).join('\n');
+    const rawLines = combinedInstructions.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
+    const numberedItems = rawLines.filter(l => /^(?:\d+[\.\)]|[-*•])\s+/.test(l));
+
+    const steps = [];
+
+    if (numberedItems.length >= 2) {
+      numberedItems.forEach((item, idx) => {
+        const cleanItem = item.replace(/^(?:\d+[\.\)]|[-*•])\s+/, '').trim();
+        const parts = cleanItem.split(/[:;]\s+|\.\s+/).map(p => p.trim()).filter(Boolean);
+        const stepText = parts[0] || cleanItem;
+        const subSteps = parts.slice(1).map((sub, sIdx) => ({
+          id: `sub-${idx + 1}-${sIdx + 1}`,
+          text: sub
+        }));
+        if (subSteps.length === 0) {
+          subSteps.push({ id: `sub-${idx + 1}-1`, text: `Execute: ${stepText}` });
+        }
+        steps.push({
+          id: `step-${idx + 1}`,
+          text: stepText,
+          required: true,
+          subSteps: subSteps
+        });
+      });
+    } else {
+      const sentences = combinedInstructions
+        ? combinedInstructions.split(/(?<=[.!?])\s+/).map(s => s.trim().replace(/\.$/, '')).filter(s => s.length > 5)
+        : [];
+
+      if (sentences.length >= 3) {
+        steps.push({
+          id: 'step-1',
+          text: `Phase 1: Setup & Initial Work`,
+          required: true,
+          subSteps: [
+            { id: 'sub-1-1', text: 'Gather required tools and workspace equipment' },
+            { id: 'sub-1-2', text: sentences[0] }
+          ]
+        });
+        steps.push({
+          id: 'step-2',
+          text: `Phase 2: Core Task Execution`,
+          required: true,
+          subSteps: [
+            { id: 'sub-2-1', text: sentences[1] },
+            { id: 'sub-2-2', text: sentences[2] || 'Check accuracy against criteria' }
+          ]
+        });
+        steps.push({
+          id: 'step-3',
+          text: `Phase 3: Review & Final Submission`,
+          required: true,
+          subSteps: [
+            { id: 'sub-3-1', text: sentences[3] || 'Self-check completed work against success criteria' },
+            { id: 'sub-3-2', text: 'Tidy workstation and notify teacher of completion' }
+          ]
+        });
+      } else if (sentences.length > 0) {
+        sentences.forEach((s, idx) => {
+          steps.push({
+            id: `step-${idx + 1}`,
+            text: `Step ${idx + 1}: ${s}`,
+            required: true,
+            subSteps: [
+              { id: `sub-${idx + 1}-1`, text: `Complete: ${s}` },
+              { id: `sub-${idx + 1}-2`, text: 'Verify step is complete to quality standard' }
+            ]
+          });
+        });
+        steps.push({
+          id: `step-${steps.length + 1}`,
+          text: 'Final Verification & Pack Down',
+          required: true,
+          subSteps: [
+            { id: `sub-${steps.length + 1}-1`, text: 'Review all steps are complete' },
+            { id: `sub-${steps.length + 1}-2`, text: 'Clean and pack up work bench' }
+          ]
+        });
+      } else {
+        const baseTitle = taskTitle || 'Task';
+        steps.push({
+          id: 'step-1',
+          text: `Stage 1: Preparation for ${baseTitle}`,
+          required: true,
+          subSteps: [
+            { id: 'sub-1-1', text: 'Review task requirements and gather required equipment' },
+            { id: 'sub-1-2', text: 'Confirm safety guidelines and workspace cleanliness' }
+          ]
+        });
+        steps.push({
+          id: 'step-2',
+          text: `Stage 2: Execute ${baseTitle}`,
+          required: true,
+          subSteps: [
+            { id: 'sub-2-1', text: `Complete the primary sequence for ${baseTitle}` },
+            { id: 'sub-2-2', text: 'Inspect workmanship against quality criteria' }
+          ]
+        });
+        steps.push({
+          id: 'step-3',
+          text: 'Stage 3: Pack Down & Completion',
+          required: true,
+          subSteps: [
+            { id: 'sub-3-1', text: 'Return all tools and materials to storage' },
+            { id: 'sub-3-2', text: 'Check off all expectation card items on the student portal' }
+          ]
+        });
+      }
+    }
+
+    const summary = taskContext
+      ? (taskContext.length > 180 ? taskContext.substring(0, 177) + '...' : taskContext)
+      : `Follow the step-by-step checklist below to complete ${taskTitle || 'your task'} smoothly and safely.`;
+
     return {
       ok: true,
       data: {
         cardData: {
-          cardTitle: payload.taskTitle ? `${payload.taskTitle} Expectations` : 'Chair Sanding Expectations',
-          studentFriendlySummary: 'Complete the two-stage sanding sequence smoothly before the end of this lesson.',
-          steps: [
-            { id: 'step-1', text: 'Sand the main chair frame using 120 grit sandpaper first', required: true },
-            { id: 'step-2', text: 'Follow up with 240 grit sandpaper for a perfectly smooth surface', required: true },
-            { id: 'step-3', text: 'Return sandpaper and tools to the workshop cabinet when finished', required: true }
-          ],
+          cardTitle: cardTitle,
+          studentFriendlySummary: summary,
+          steps: steps,
           successCriteria: [
-            'Surface is completely smooth with no rough edges or scratches',
-            'Tools and materials returned to the cabinet'
+            `All steps for ${taskTitle || 'this task'} completed according to criteria`,
+            'High standard of workmanship and safety observed',
+            'Tools and workspace cleaned and packed away'
           ],
           materials: [
-            { label: '120 and 240 grit sandpaper', url: '' },
-            { label: 'Safety glasses and dust mask', url: '' }
+            { label: 'Required tools and workshop materials', url: '' }
           ],
-          checkInQuestion: 'What grit sandpaper will you start with?',
-          teacherMessage: 'Looking forward to starting varnish next lesson!',
-          teacherOnlyNotes: 'Student needs reminder on wearing safety glasses at all times.'
+          checkInQuestion: `What is the first step you will complete today for ${taskTitle || 'your task'}?`,
+          teacherMessage: 'Take your time, work carefully, and let me know if you need assistance!',
+          teacherOnlyNotes: teacherNotes || ''
         }
       }
     };

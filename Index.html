@@ -1035,8 +1035,17 @@
                 <div id="confirm-steps-count" class="text-xs text-muted" style="margin-top: 0.25rem;">0 Action steps ready</div>
               </div>
 
+              <!-- Stream Announcement Preview with Teacher Name -->
+              <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 0.75rem;">
+                <div class="flex justify-between items-center" style="margin-bottom: 0.35rem;">
+                  <span class="text-xs font-semibold" style="color: #475569;">📢 Google Classroom Stream Announcement Preview:</span>
+                  <button type="button" class="btn btn-secondary btn-sm text-xs" onclick="App.openSettingsModal()" style="padding: 2px 8px; font-size: 0.75rem;">✏️ Edit Teacher Name</button>
+                </div>
+                <pre id="confirm-stream-preview" style="background: #ffffff; border: 1px solid var(--border); border-radius: 4px; padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.82rem; line-height: 1.5; color: #1e293b; white-space: pre-wrap; margin: 0;"></pre>
+              </div>
+
               <div class="notice notice-info text-xs" style="padding: 0.6rem 0.85rem; margin-bottom: 0.75rem;">
-                <span>📢 <strong>Classroom Delivery:</strong> Posts directly to your Google Classroom course. Students receive an assignment linking to their interactive expectation checklist.</span>
+                <span>📢 <strong>Classroom Stream Delivery:</strong> Posts directly to your Google Classroom Stream. Students open their interactive card link without login walls or permission popups.</span>
               </div>
 
               <!-- Delivery Results Box -->
@@ -1193,6 +1202,11 @@
         <span class="text-xs text-muted">Deployed URL for teacher Classroom access and student links.</span>
       </div>
       <div class="form-group">
+        <label class="form-label" for="settings-teacher-name">Teacher Name / Sign-off <span class="badge badge-primary text-xs" style="margin-left: 6px;">Used in Stream Announcements</span></label>
+        <input type="text" id="settings-teacher-name" class="form-control" placeholder="e.g. Mr. Smith, Ms. Johnson, or your name">
+        <span class="text-xs text-muted">Automatically signs Google Classroom Stream announcements (e.g. "Kind Regards,\n[Teacher Name]").</span>
+      </div>
+      <div class="form-group">
         <label class="form-label" for="settings-domain">Allowed Teacher Domain</label>
         <input type="text" id="settings-domain" class="form-control" placeholder="e.g. school.edu.au">
       </div>
@@ -1339,7 +1353,8 @@
             allowedDomain: 'school.edu.au',
             audioRetentionDays: 30,
             deleteAudioAfterTranscription: true,
-            classroomDeliveryEnabled: true
+            classroomDeliveryEnabled: true,
+            teacherName: 'Mr. Smith'
           }
         };
         this.saveDb(defaultDb);
@@ -1726,6 +1741,10 @@
 
         // Initialize Teacher View
         this.showDashboard();
+        try {
+          const s = await Server.call('getSettings', []);
+          this.state.settings = s || {};
+        } catch (e) {}
         await this.loadCourses();
         await this.refreshTeacherCards();
       },
@@ -2054,6 +2073,23 @@
         const confirmSteps = document.getElementById('confirm-steps-count');
         if (confirmSteps) {
           confirmSteps.textContent = `${stepsCount} Action step${stepsCount === 1 ? '' : 's'} configured`;
+        }
+
+        const streamPreview = document.getElementById('confirm-stream-preview');
+        if (streamPreview) {
+          let recipientGreeting = 'Class';
+          if (!this.state.testModeAllStudents && this.state.selectedRecipients.length === 1) {
+            recipientGreeting = this.state.selectedRecipients[0].name;
+          } else if (!this.state.testModeAllStudents && this.state.selectedRecipients.length > 1) {
+            recipientGreeting = this.state.selectedRecipients.map(r => r.name).join(', ');
+          } else if (course && course.name) {
+            recipientGreeting = course.name;
+          }
+          const teacherSig = (this.state.settings && this.state.settings.teacherName)
+            ? this.state.settings.teacherName
+            : (document.getElementById('settings-teacher-name') && document.getElementById('settings-teacher-name').value.trim()) || 'Teacher';
+          const titleText = cardTitle || taskTitle || 'Task Expectations';
+          streamPreview.textContent = `Hello ${recipientGreeting},\n\nOpen the Expectation Card linked for "${titleText}".\n\nKind Regards,\n${teacherSig}`;
         }
 
         // 3. Jump Navigation Checkmarks
@@ -3103,6 +3139,8 @@
       openSettingsModal: async function() {
         try {
           const s = await Server.call('getSettings', []);
+          const teacherNameEl = document.getElementById('settings-teacher-name');
+          if (teacherNameEl) teacherNameEl.value = s.teacherName || '';
           document.getElementById('settings-domain').value = s.allowedDomain || '';
           document.getElementById('settings-retention').value = s.audioRetentionDays || 30;
           document.getElementById('settings-delete-after-transcription').checked = !!s.deleteAudioAfterTranscription;
@@ -3115,7 +3153,10 @@
       },
 
       saveSettings: async function() {
+        const teacherNameInput = document.getElementById('settings-teacher-name');
+        const teacherNameVal = teacherNameInput ? teacherNameInput.value.trim() : '';
         const payload = {
+          teacherName: teacherNameVal,
           allowedDomain: document.getElementById('settings-domain').value.trim(),
           audioRetentionDays: parseInt(document.getElementById('settings-retention').value, 10),
           deleteAudioAfterTranscription: document.getElementById('settings-delete-after-transcription').checked,
@@ -3123,7 +3164,11 @@
         };
         try {
           await Server.call('saveSettings', [payload]);
-          UI.toast('Settings saved.', 'success');
+          if (this.state && this.state.settings) {
+            this.state.settings.teacherName = teacherNameVal;
+          }
+          this.autoUpdateAllElements();
+          UI.toast('Settings saved successfully.', 'success');
           this.closeSettingsModal();
         } catch (e) {
           UI.toast('Failed to save settings: ' + e.message, 'error');
