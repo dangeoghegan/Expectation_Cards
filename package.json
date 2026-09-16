@@ -2,8 +2,11 @@
   "name": "expectation-cards",
   "version": "1.0.0",
   "description": "Mobile-first Google Apps Script application for tracking student expectations.",
-  "main": "src/Code.js",
+  "main": "Code.gs",
   "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node -e \"console.log('Build complete')\"",
     "push": "clasp push",
     "pull": "clasp pull",
     "deploy": "clasp deploy"
@@ -12,6 +15,8 @@
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
-    "@google/clasp": "^2.4.2"
+    "@google/clasp": "^2.4.2",
+    "@google/genai": "^2.22.0",
+    "express": "^5.2.1"
   }
 }

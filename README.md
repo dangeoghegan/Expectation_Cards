@@ -1,65 +1,126 @@
-# Expectation Cards
+# Task Expectations
 
-A production-ready, mobile-first web application for high-school teachers to record spoken expectations, use Gemini to generate a structured checklist, and deliver it to students via Google Classroom.
+A production-ready, mobile-first Google Apps Script web application for high-school teachers to record spoken expectations during one-on-one or small group conversations, use Google Gemini to generate structured checklists, and deliver actionable expectation cards directly to students via Google Classroom.
 
-## Architecture & Technology Stack
-- **Backend:** Google Apps Script (Standalone) running on the V8 engine.
-- **Frontend:** Apps Script HTML Service (HTML/CSS/Vanilla JS) built for mobile-first.
-- **Database:** Google Sheets (`SheetService.js`).
-- **File Storage:** Google Drive (`DriveService.js`) for audio recordings.
-- **AI Processing:** Gemini API (`GeminiService.js`) for audio transcription and JSON extraction.
-- **Integrations:** Google Classroom API (Advanced Service).
+- **Repository:** `https://github.com/dangeoghegan/Expectation_Cards.git`
+- **Web App URL:** `https://script.google.com/macros/s/AKfycbycd4kyX91auYKE8qlxaM3QUQ-bA7O4VSFWQOr_1Op4aHBHftcNTDU3l-dotUQCVzGUNw/exec`
 
-## Setup & Deployment Instructions
+---
 
-### 1. Google Sheet Setup
-1. Create a new Google Sheet (e.g., named "Expectation Cards DB").
-2. In the Google Sheet, go to **Extensions** > **Apps Script**.
+## 🏗️ Architecture & Philosophy
 
-### 2. Apps Script Setup
-1. Clone this repository to your local machine.
-2. Run `npm install` to get the clasp dependency.
-3. Authenticate clasp: `npx clasp login`
-4. Link to your bound Apps Script project: `npx clasp clone <script-id>` (Find the script ID in the Apps Script URL or Project Settings).
-5. Ensure the local files override the cloned default files, and push the code: `npx clasp push`
-6. In the Apps Script Editor, go to **Services** (left sidebar) and add:
-   - `Classroom API (v1)`
-   - `Drive API (v2)`
-7. Refresh your Google Sheet. You should see a new custom menu: **Expectation Cards**.
-8. Click **Expectation Cards** > **Setup Application** to initialize the required sheets and Drive folders. (You will need to authorize the script).
-9. Go to **Project Settings** (gear icon) > **Script Properties**.
-10. Ensure the following Script Properties are set:
+The application strictly follows a clean, single front-end and single back-end architecture for seamless deployment in Google Apps Script and local Node.js environments:
+
+- **Single Front-End File (`index.html`):**
+  - Self-contained HTML5, CSS custom properties, and vanilla JavaScript.
+  - Zero external JS frameworks or runtime dependencies (no React, Vue, npm packages, or bundlers).
+  - Responsive, accessible design with mobile-first student view and desktop/tablet teacher dashboard.
+  - Interactive audio recorder with duration timer, audio playback, manual transcript editing, and sample audio fallback.
+  - Multi-step guided teacher workflow (Class selection, Student roster multi-select, Task templates, Conversation recording, Gemini AI draft generation, Review & Edit editor, Classroom delivery).
+  - Distraction-free, mobile-first student portal with real-time checklist toggles, success criteria, material badges, reflection check-in, and acknowledgement button.
+  - Full compatibility with Apps Script `google.script.run` and local Express RPC bridge.
+
+- **Single Back-End File (`Code.gs`):**
+  - Fully structured into 15 clearly delineated service sections.
+  - Implements transactional locking via `LockService` for Google Sheets data integrity.
+  - Full Google Classroom integration creating targeted Coursework items without sending unsolicited emails.
+  - Pluggable Gemini 2.5 Flash audio transcription and structured JSON generation.
+  - Automated audio retention cleanup and privacy protection.
+  - Strict server-side authorization ensuring students can only view their own cards and never see teacher-only notes.
+
+- **Apps Script Manifest (`appsscript.json`):**
+  - Declares required OAuth scopes and Advanced Services (`Classroom v1` and `Drive v2`).
+
+---
+
+## 📋 Google Sheets Schema (`setupApp`)
+
+Running `setupApp()` initializes the following schema in the bound Google Spreadsheet:
+
+1. **`Settings`:** `Key`, `Value`, `Notes`, `UpdatedAt`, `UpdatedBy`
+2. **`Cards`:** `CardId`, `CreatedAt`, `UpdatedAt`, `CreatedByEmail`, `ClassId`, `ClassName`, `TaskId`, `TaskTitle`, `TaskContext`, `Transcript`, `CardTitle`, `StudentFriendlySummary`, `TeacherMessage`, `ExpectationsJson`, `SuccessCriteriaJson`, `MaterialsJson`, `CheckInQuestion`, `TeacherOnlyNotes`, `ReviewDate`, `Status`, `ClassroomCourseWorkId`, `ClassroomAlternateLink`, `DeliveryError`, `SentAt`, `ArchivedAt`
+3. **`CardRecipients`:** `RecipientId`, `CardId`, `StudentGoogleUserId`, `StudentEmail`, `StudentName`, `ClassId`, `ClassroomSubmissionId`, `ClassroomDeliveryStatus`, `SentAt`, `ViewedAt`, `AcknowledgedAt`, `AcknowledgementText`, `LastError`
+4. **`Tasks`:** `TaskId`, `ClassId`, `TaskName`, `Description`, `DefaultSuccessCriteriaJson`, `DefaultMaterialsJson`, `IsActive`, `CreatedAt`, `UpdatedAt`
+5. **`Groups`:** `GroupId`, `ClassId`, `GroupName`, `StudentEmailsJson`, `CreatedAt`, `UpdatedAt`, `CreatedByEmail`
+6. **`AuditLog`:** `AuditId`, `Timestamp`, `ActorEmail`, `Action`, `CardId`, `RecipientId`, `DetailsJson`
+7. **`Recordings`:** `RecordingId`, `CardId`, `DriveFileId`, `Filename`, `MimeType`, `SizeBytes`, `CreatedAt`, `DeletedAt`
+
+---
+
+## 🚀 Setup & Deployment Guide
+
+### 1. Create Google Sheet & Bound Apps Script
+1. Create a new Google Sheet in your Google Workspace drive (e.g. `Task Expectations Store`).
+2. In the Google Sheet, navigate to **Extensions** > **Apps Script**.
+
+### 2. Add Required Advanced Services & Cloud APIs
+1. In the Apps Script Editor, click **Services (+)** on the left sidebar:
+   - Add **Google Classroom API** (Identifier: `Classroom`, Version: `v1`).
+   - Add **Google Drive API** (Identifier: `Drive`, Version: `v2`).
+2. In the attached Google Cloud Project (via Project Settings), ensure the following APIs are enabled:
+   - Google Classroom API (`classroom.googleapis.com`)
+   - Google Drive API (`drive.googleapis.com`)
+   - Generative Language API (`generativelanguage.googleapis.com`)
+
+### 3. Push Files via Clasp
+1. Clone the repository and install dependencies:
+   ```bash
+   git clone https://github.com/dangeoghegan/Expectation_Cards.git
+   cd Expectation_Cards
+   npm install
+   ```
+2. Login and link to your Apps Script project:
+   ```bash
+   npx clasp login
+   npx clasp clone <SCRIPT_ID>
+   ```
+3. Push files to Apps Script:
+   ```bash
+   npx clasp push
+   ```
+
+### 4. Configure Script Properties
+In Apps Script Editor, go to **Project Settings** (gear icon) > **Script Properties** and configure:
 
 | Property Name | Example Value | Description |
-| --- | --- | --- |
-| `GEMINI_API_KEY` | `AIzaSy...` | Get from Google AI Studio. |
-| `EXPECTATION_CARDS_ROOT_FOLDER_ID` | (auto-generated) | Root Drive Folder ID. |
-| `EXPECTATION_CARDS_AUDIO_FOLDER_ID`| (auto-generated) | Audio Storage Folder ID. |
-| `TEACHER_EMAIL_ALLOWLIST` | `teacher@school.edu` | Comma-separated list of authorised teachers. |
-| `AUTHORISED_DOMAIN` | `school.edu` | (Optional) Workspace domain to authorise all teachers. |
-| `APP_BASE_URL` | `https://script.google.com/.../exec` | The published Web App URL. |
-| `AUDIO_RETENTION_DAYS` | `30` | Days to keep fallback audio. |
-| `DELETE_AUDIO_AFTER_TRANSCRIPTION` | `true` | Set to true to delete audio immediately after processing. |
+|---|---|---|
+| `GEMINI_API_KEY` | `AIzaSy...` | Required for Gemini audio transcription and expectation drafting. |
+| `APP_BASE_URL` | `https://script.google.com/.../exec` | Web App deployment URL. |
+| `ALLOWED_TEACHER_DOMAIN` | `school.nsw.edu.au` | Google Workspace domain authorized for teachers. |
+| `ALLOWED_TEACHER_EMAILS` | `teacher1@school.edu,teacher2@school.edu` | Optional allowlist of specific teacher emails. |
+| `EXPECTATION_CARDS_ROOT_FOLDER_ID` | `1abc...` | (Auto-created during `setupApp()`) Drive folder for app storage. |
+| `EXPECTATION_CARDS_AUDIO_FOLDER_ID` | `1xyz...` | (Auto-created during `setupApp()`) Transient audio folder. |
+| `AUDIO_RETENTION_DAYS` | `30` | Number of days before un-deleted audio files are purged. |
+| `DELETE_AUDIO_AFTER_TRANSCRIPTION` | `true` | When `true`, transient audio files are trashed immediately following transcription. |
+| `ENABLE_CLASSROOM_DELIVERY` | `true` | Set to `true` to enable direct Google Classroom Coursework creation. |
 
-### 3. Deployment
+### 5. Deploy Web App
 1. Click **Deploy** > **New deployment**.
 2. Select type **Web app**.
-3. **Execute as:** User accessing the web app.
-4. **Who has access:** Anyone (or "Anyone within [Your Domain]").
-5. Click **Deploy** and copy the resulting Web App URL to the `APP_BASE_URL` property.
+3. Set **Execute as:** `User accessing the web app` (MANDATORY: identifies student or teacher email via `Session.getActiveUser().getEmail()`).
+4. Set **Who has access:** `Anyone within [Your Domain]` (or `Anyone` if students access through school Google accounts).
+5. Click **Deploy** and copy the Web App URL into `APP_BASE_URL`.
 
-## Testing
-Refer to `tests/manual-test-checklist.md` for full acceptance test scenarios.
+---
 
-## Known Limitations
-- The `ClassroomService.attachLinkToSubmission` method may require specific Workspace admin configurations depending on how student submission modifications are restricted by the school's policy.
-- Large audio recordings (over several minutes) might hit Apps Script 6-minute execution limits or urlfetch payload limits.
-- iOS Safari requires explicit user interaction to start the Web Audio API or `getUserMedia`.
+## 💻 Local Development & Testing
 
-## File Structure
-- `src/Code.js`: Main entry and WebApp routing.
-- `src/Setup.js`: Installation logic.
-- `src/Config.js`, `src/Auth.js`, `src/Utils.js`, `src/Validation.js`: Core utilities.
-- `src/*Service.js`: API and data abstraction layers.
-- `src/*.html`: Frontend UI.
-- `tests/`: Testing resources.
+This project includes an Express server that emulates all `Code.gs` server handlers and serves `index.html`:
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000` to interact with the teacher dashboard, record test audio, test AI card generation, and preview the student portal.
+
+---
+
+## 🔒 Privacy & Safety Guidelines
+- **Teacher Review Required:** AI-generated cards are strictly drafts for teacher review. Nothing is ever sent to a student automatically.
+- **Student Privacy:** Students can only view their own cards via authorized email or secure card tokens. Raw audio, transcripts, and teacher-only notes are never sent or visible to students.
+- **No Unsolicited Emails:** Task expectations are posted directly as Coursework in Google Classroom.
+
+---
+
+## 🧪 Acceptance Testing
+Refer to `tests/manual-test-checklist.md` for the full test verification suite.

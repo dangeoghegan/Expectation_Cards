@@ -1,0 +1,6 @@
+{
+  "name": "Expectation Cards",
+  "description": "Mobile-first web application for high-school teachers to record spoken expectations, use Gemini to generate structured checklists, and deliver to students.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
