@@ -27,6 +27,7 @@
  *    - https://www.googleapis.com/auth/classroom.courses.readonly
  *    - https://www.googleapis.com/auth/classroom.rosters.readonly
  *    - https://www.googleapis.com/auth/classroom.coursework.students
+ *    - https://www.googleapis.com/auth/classroom.announcements
  *    - https://www.googleapis.com/auth/userinfo.email
  *
  * 4. RECOMMENDED WEB APP DEPLOYMENT SETTINGS:
@@ -853,7 +854,11 @@ const ClassroomHelper = {
       };
     } catch (err) {
       console.error('Error creating Stream announcement in Classroom:', err);
-      throw new Error(`Failed to post Stream announcement to Google Classroom: ${err.message}`);
+      let errMsg = `Failed to post Stream announcement to Google Classroom: ${err.message}`;
+      if (err.message && err.message.includes('classroom.announcements')) {
+        errMsg += " You may need to re-authenticate the application to grant it permission to manage Google Classroom Announcements.";
+      }
+      throw new Error(errMsg);
     }
   },
 
@@ -1866,6 +1871,8 @@ function generateExpectationsFromTranscript(payload) {
       '',
       'Return a single JSON object with EXACTLY this structure:',
       '{',
+      '  "taskTitle": "string (a concise title for the task based on the transcript, if not provided)",',
+      '  "taskContext": "string (specific learning instructions extracted from the transcript, if not provided)",',
       '  "cardTitle": "string (clear student-friendly card title)",',
       '  "studentFriendlySummary": "string (1-2 sentences summarizing expectations)",',
       '  "steps": [',
@@ -2063,6 +2070,8 @@ function synthesizeCardFallback_(taskTitle, taskContext, teacherNotes, transcrip
   ];
 
   return {
+    taskTitle: title,
+    taskContext: taskContext || '',
     cardTitle: title,
     studentFriendlySummary: taskContext || `Follow these step-by-step expectations to complete ${title}.`,
     teacherMessage: 'Take your time, read each step carefully, and check them off as you progress.',
@@ -2087,6 +2096,8 @@ function regenerateExpectations(payload) {
 function validateAndNormalizeCardStructure_(card) {
   if (!card || typeof card !== 'object') card = {};
 
+  card.taskTitle = sanitiseText_(card.taskTitle || '');
+  card.taskContext = sanitiseText_(card.taskContext || '');
   card.cardTitle = sanitiseText_(card.cardTitle || 'Task Expectations');
   card.studentFriendlySummary = sanitiseText_(card.studentFriendlySummary || '');
   card.teacherMessage = sanitiseText_(card.teacherMessage || '');

@@ -3341,6 +3341,14 @@
           }]);
 
           this.state.currentDraft = Object.assign(this.state.currentDraft, resp.cardData);
+          if (resp.cardData.taskTitle) {
+            const titleInput = document.getElementById('input-task-title');
+            if (titleInput) titleInput.value = resp.cardData.taskTitle;
+          }
+          if (resp.cardData.taskContext) {
+            const contextInput = document.getElementById('input-task-context');
+            if (contextInput) contextInput.value = resp.cardData.taskContext;
+          }
           UI.toast('Expectation card generated and updated!', 'success');
         } catch (err) {
           console.warn('AI generator fallback:', err);
